@@ -17,8 +17,8 @@ window.APPSICO_CONFIG = {
   supabase: {
     url: "",          // ex.: "https://abcdefghijkl.supabase.co"
     anonKey: "",      // a chave "anon public" / "publishable" (pode ficar no app, é pública)
-    appUrl: "",       // endereço da versão web, ex.: "https://www.appsico.com.br/app/"
-    siteUrl: ""       // endereço do site, ex.: "https://www.appsico.com.br"
+    appUrl: "https://www.appsico.com.br/app/",       // endereço da versão web, ex.: "https://www.appsico.com.br/app/"
+    siteUrl: "https://www.appsico.com.br"       // endereço do site, ex.: "https://www.appsico.com.br"
   },
   emailjs: {
     serviceId: "",

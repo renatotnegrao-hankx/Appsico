@@ -30,7 +30,7 @@ Faça na ordem. Total: uns 40 minutos.
 ## 3. Login por e-mail (3 min)
 Menu **Authentication → URL Configuration**:
 - **Site URL**: o endereço da versão web, por exemplo `https://www.appsico.com.br/app/`
-  (enquanto não tiver o domínio: `https://renatotnegrao-hankx.github.io/Appsico/app/`)
+  (o domínio www.appsico.com.br já está configurado no GitHub Pages)
 - **Redirect URLs**: o mesmo endereço.
 
 Em **Authentication → Sign In / Providers → Email**, deixe **Confirm email** ligado.
