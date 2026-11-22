@@ -1,3 +1,0 @@
-Arquivo do app: appsico.apk (versão 3.5)
-O botão "Baixar para Android" do site aponta para downloads/appsico.apk
-Para publicar uma versão nova, substitua o arquivo mantendo o mesmo nome.

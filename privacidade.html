@@ -28,19 +28,19 @@
   <p>O Appsico é um aplicativo de prontuário eletrônico destinado a psicólogas e psicólogos. Contato: <a href="mailto:contato@appsico.com.br">contato@appsico.com.br</a>.</p>
 
   <h2>2. Dados dos pacientes</h2>
-  <p>Os prontuários e demais informações sobre pacientes são registrados pelo profissional e armazenados <strong>somente no aparelho do usuário</strong>, em banco de dados criptografado. O Appsico não envia esses dados para servidores próprios nem os compartilha com terceiros. O profissional é o controlador desses dados e responsável pelo sigilo, nos termos do Código de Ética Profissional do Psicólogo e das resoluções do CFP.</p>
+  <p>Os prontuários e demais informações sobre pacientes são registrados pelo profissional e <strong>criptografados no próprio aparelho</strong> (AES-256) antes de serem enviados à conta do usuário na nuvem, onde ficam guardados apenas dessa forma, para sincronizar celular e computador. A chave que abre esses dados é protegida pela senha da conta e por um código de recuperação que só o usuário conhece: nem o Appsico nem o provedor de nuvem conseguem ler os prontuários. Em relação aos dados dos pacientes, o profissional é o controlador, nos termos da LGPD.</p>
 
   <h2>3. Dados do usuário (profissional)</h2>
-  <p>Para criar o acesso e permitir a redefinição do PIN, o aplicativo utiliza o e-mail informado pelo usuário. Em caso de assinatura, os dados de pagamento são processados pela loja de aplicativos ou pela instituição de pagamento escolhida (cartão ou Pix); o Appsico não armazena números de cartão.</p>
+  <p>Para criar a conta, o Appsico guarda nome, CRP, e-mail e a situação da assinatura (período de teste, plano e validade). Os dados ficam no Supabase, provedor de banco de dados e autenticação. Os pagamentos são processados pelo Mercado Pago, que recebe os dados necessários à cobrança; o Appsico não armazena dados de cartão.</p>
 
   <h2>4. Segurança</h2>
-  <p>O acesso ao aplicativo é protegido por PIN de 6 dígitos e o banco de dados é criptografado. Recomendamos manter o aparelho com bloqueio de tela e fazer cópias de segurança conforme as orientações do aplicativo.</p>
+  <p>O acesso usa e-mail e senha da conta e, em cada aparelho, um PIN de 4 números. Os prontuários são criptografados de ponta a ponta. Recomendamos manter o aparelho com bloqueio de tela, guardar o código de recuperação em local seguro e sair da conta em computadores compartilhados.</p>
 
   <h2>5. Guarda das informações</h2>
-  <p>O CFP determina a guarda do prontuário por no mínimo 20 anos. Como os dados ficam no aparelho do usuário, cabe ao profissional preservá-los por esse período. A desinstalação do aplicativo ou a perda do aparelho pode apagar os dados não copiados.</p>
+  <p>Os prontuários ficam guardados na conta do profissional enquanto ela existir. Sem assinatura ativa, os dados continuam disponíveis para leitura e exportação. A exclusão da conta apaga definitivamente os dados da nuvem; antes de excluir, cabe ao profissional exportar e preservar os registros pelo prazo exigido pelo Conselho Federal de Psicologia.</p>
 
   <h2>6. Seus direitos</h2>
-  <p>Você pode solicitar informações, correção ou exclusão dos seus dados de cadastro pelo e-mail <a href="mailto:contato@appsico.com.br">contato@appsico.com.br</a>.</p>
+  <p>Você pode consultar e corrigir seus dados de cadastro no próprio app e excluir a conta em Configurações → Conta e nuvem. Outras solicitações: <a href="mailto:contato@appsico.com.br">contato@appsico.com.br</a>.</p>
 
   <h2>7. Alterações</h2>
   <p>Esta política pode ser atualizada. A versão vigente estará sempre disponível nesta página.</p>

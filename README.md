@@ -8,7 +8,9 @@ Site institucional do Appsico (prontuário eletrônico para psicólogos), public
 - `assets/logo.png` — símbolo do logo (cabeça com Ψ); `assets/logo-completo.png` — logo com o nome; `assets/favicon.png` — ícone da aba
 - `assets/fotos/` — fotos de bem-estar usadas no site (topo, faixa central, "Cuidar de quem cuida", sigilo e download)
 - `assets/telas/` — telas reais do app (pacientes fictícios de demonstração)
-- `downloads/appsico.apk` — APK do app (versão 3.5). Para atualizar, substitua por um novo com o mesmo nome
+- `app/` — versão web do Appsico (para computador), a mesma do app Android
+- `supabase/` — banco de dados e funções (assinatura pelo Mercado Pago e download do APK)
+- `LEIA-ME-CONFIGURAR.md` — passo a passo para ligar a conta na nuvem, a assinatura e o download do app
 
 ## Trocar para o domínio appsico.com.br (quando quiser)
 
