@@ -131,13 +131,12 @@ async function syncNow(manual) {
           const merged = merge3(base, DB, remote);
           const mudou = fh(merged) !== fh(DB);
           DB = merged; V.cloud.ver = row.versao;
-          if (mudou) softRender();
+          if (mudou) { snapPacientes(); softRender(); }
           h.versao = row.versao;
         }
         const atual = fh(DB);
         const precisaEnviar = remote ? atual !== remoteH : !(base && atual === base.h);
-        if (!precisaEnviar) { await setBase(DB); await persist(); setSync(somenteLeitura() ? 'ro' : 'ok'); return; }
-        if (somenteLeitura()) { await setBase(remote || DB); await persist(); setSync('ro'); return; }
+        if (!precisaEnviar) { await setBase(DB); await persist(); snapPacientes(); setSync('ok'); return; }
         const { data: nv, error: e3 } = await sb.rpc('salvar_cofre', { p_dados: await encJSON(DB), p_base: h.versao, p_disp: DISP });
         if (e3) throw e3;
         if (nv) { V.cloud.ver = nv; await setBase(DB); await persist(); setSync('ok'); return; }
@@ -156,6 +155,7 @@ async function syncNow(manual) {
 }
 function cloudStart() {
   if (!cloudLinked()) return;
+  snapPacientes();
   setSync(SYNC.st === 'off' ? 'off' : 'pend');
   syncNow();
   clearInterval(syncLoop); syncLoop = setInterval(() => { if (DEK) syncNow(); }, 60000);
@@ -185,12 +185,25 @@ function acessoInfo() {
   const fim = emTeste ? teste : pago;
   return { ativo, teste: emTeste, plano: a.plano, ate: fim ? new Date(fim).toISOString().slice(0, 10) : null, dias: fim ? Math.max(0, Math.ceil((fim - agora) / 864e5)) : 0, admin: !!a.admin };
 }
-const somenteLeitura = () => cloudLinked() && !acessoInfo().ativo;
+// Depois do teste sem assinatura: plano grátis. Os 5 pacientes mais antigos continuam com tudo
+// liberado; os demais ficam só para consulta e não é possível cadastrar o 6º paciente em diante.
+const LIMITE_GRATIS = 5;
+const planoGratis = () => cloudLinked() && !acessoInfo().ativo;
+function idsLiberados() {
+  return new Set(DB.patients.slice().sort((a, b) => String(a.criadoEm || '').localeCompare(String(b.criadoEm || ''))).slice(0, LIMITE_GRATIS).map(p => p.id));
+}
+const pacienteBloqueado = id => planoGratis() && !idsLiberados().has(id);
+let PH = null; // como cada paciente estava na última gravação aceita
+function snapPacientes() { PH = DB ? new Map(DB.patients.map(p => [p.id, fh(p)])) : null; }
 let _bloqAviso = 0;
 function cloudBloqueia() {
-  if (!somenteLeitura()) return false;
+  if (!planoGratis()) { PH = null; return false; }
+  if (!PH) { snapPacientes(); return false; }
+  const lib = idsLiberados();
+  const violou = DB.patients.some(p => !lib.has(p.id) && PH.get(p.id) !== fh(p));
+  if (!violou) { snapPacientes(); return false; }
   // desfaz a alteração: volta ao último estado salvo neste aparelho
-  (async () => { try { if (V.data) DB = await decJSON(DEK, V.data); } catch (e) {} closeModal(); render(); if (Date.now() - _bloqAviso > 1500) { _bloqAviso = Date.now(); paywall('assinatura'); } })();
+  (async () => { try { if (V.data) DB = await decJSON(DEK, V.data); } catch (e) {} snapPacientes(); closeModal(); render(); if (Date.now() - _bloqAviso > 1500) { _bloqAviso = Date.now(); paywall('gratis'); } })();
   return true;
 }
 const PLANOS_NUVEM = [
@@ -489,7 +502,7 @@ function contaCard() {
     <p style="margin:0 0 10px">Ative sua conta para sincronizar os prontuários entre o celular e o computador. Tudo vai <b>criptografado</b>: ninguém além de você consegue ler.</p>
     <div class="row-actions" style="justify-content:flex-start"><button class="pri" onclick="cloudLigar()">Ativar conta na nuvem</button></div></div></details>`;
   const a = acessoInfo();
-  const st = a.desconhecido ? 'Verificando…' : a.teste ? `Teste grátis: ${a.dias} dia${a.dias === 1 ? '' : 's'} restante${a.dias === 1 ? '' : 's'}` : a.ativo ? `Assinatura ${nomePlanoN(a.plano)} · até ${fmtD(a.ate)}` : 'Acesso encerrado — somente leitura';
+  const st = a.desconhecido ? 'Verificando…' : a.teste ? `Teste grátis: ${a.dias} dia${a.dias === 1 ? '' : 's'} restante${a.dias === 1 ? '' : 's'}` : a.ativo ? `Assinatura ${nomePlanoN(a.plano)} · até ${fmtD(a.ate)}` : `Plano grátis: até ${LIMITE_GRATIS} pacientes`;
   return `<details class="card acc" open><summary><span class="acc-ic">${IC.backup}</span><span class="acc-t"><b>Conta e nuvem</b><small>${esc(V.cloud.email)}</small></span></summary><div class="acc-body">
     <div class="conta-st ${a.ativo ? (a.teste ? 'teste' : 'ok') : 'fim'}"><b>${esc(st)}</b><span>${syncBadge()}</span></div>
     <div class="row-actions" style="justify-content:flex-start;flex-wrap:wrap">
@@ -510,10 +523,10 @@ const nomePlanoN = id => ({ mensal: 'mensal', anual: 'anual', anualpix: 'anual (
 /* ---------- tela de planos (nuvem) ---------- */
 function panePremiumNuvem(m) {
   const a = acessoInfo(), sel = S.planoSel || 'anual';
-  m.innerHTML = `<div class="head"><div><h1>Assinatura Appsico</h1><div class="meta">${a.teste ? `Teste grátis até ${fmtD(a.ate)} (${a.dias} dia${a.dias === 1 ? '' : 's'})` : a.ativo ? `Assinatura ${nomePlanoN(a.plano)} ativa até ${fmtD(a.ate)}` : 'Seu acesso terminou — os prontuários estão em modo somente leitura'}</div></div>${sairBtn()}</div>
+  m.innerHTML = `<div class="head"><div><h1>Assinatura Appsico</h1><div class="meta">${a.teste ? `Teste grátis até ${fmtD(a.ate)} (${a.dias} dia${a.dias === 1 ? '' : 's'})` : a.ativo ? `Assinatura ${nomePlanoN(a.plano)} ativa até ${fmtD(a.ate)}` : `Seu teste terminou — você está no plano grátis (até ${LIMITE_GRATIS} pacientes)`}</div></div>${sairBtn()}</div>
     <div class="prem-hero"><span class="ph-ic">${IC.crown}</span><div><b>${a.ativo && !a.teste ? 'Obrigado por assinar o Appsico!' : 'Continue com tudo o que você já usa'}</b>
       <small>Prontuários criptografados no celular e no computador, agenda, lembretes, documentos, financeiro e Pix. Cancele quando quiser.</small></div></div>
-    ${!a.ativo ? '<div class="note warn">Sem assinatura ativa, você continua vendo e exportando todos os prontuários, mas não pode criar nem alterar registros.</div>' : ''}
+    ${!a.ativo ? `<div class="note warn">No plano grátis você continua usando tudo normalmente com os seus ${LIMITE_GRATIS} primeiros pacientes. Os demais ficam só para consulta e exportação, e não é possível cadastrar novos. Assine para liberar pacientes ilimitados.</div>` : ''}
     <div class="planos">${PLANOS_NUVEM.map(x => `<button class="plano ${sel === x.id ? 'on' : ''}" onclick="S.planoSel='${x.id}';panePremiumNuvem($('main'))">
       ${x.tag ? `<span class="pl-tag">${x.tag}</span>` : ''}<span class="pl-radio"></span><b>${x.nome}</b><span class="pl-preco">${x.preco}</span><small>${x.per}</small><small class="pl-obs">${x.obs}</small></button>`).join('')}</div>
     <div class="row-actions prem-act"><button class="pri big" onclick="cloudAssinar('${sel}')">${IC.crown} ${sel === 'anualpix' ? 'Pagar' : 'Assinar'} ${PLANOS_NUVEM.find(x => x.id === sel).nome} · ${PLANOS_NUVEM.find(x => x.id === sel).preco}</button></div>
@@ -522,7 +535,8 @@ function panePremiumNuvem(m) {
 }
 function bannerNuvem() {
   const a = acessoInfo(); if (a.desconhecido) return '';
-  if (!a.ativo) return `<button class="plano-banner fim" onclick="go('premium',{cur:null})"><span class="pb-ic">${IC.lock}</span><span class="pb-txt"><b>Seu teste grátis terminou</b><small>Os prontuários estão em modo somente leitura. Assine para voltar a registrar.</small></span><span class="pb-go">Assinar</span></button>`;
+  if (!a.ativo) { const n = DB.patients.length;
+    return `<button class="plano-banner fim" onclick="go('premium',{cur:null})"><span class="pb-ic">${IC.lock}</span><span class="pb-txt"><b>Plano grátis · ${Math.min(n, LIMITE_GRATIS)} de ${LIMITE_GRATIS} pacientes</b><small>${n > LIMITE_GRATIS ? `Seu teste terminou: ${n - LIMITE_GRATIS} paciente${n - LIMITE_GRATIS > 1 ? 's ficam' : ' fica'} só para consulta.` : 'Seu teste terminou.'} Assine para pacientes ilimitados.</small></span><span class="pb-go">Assinar</span></button>`; }
   if (a.teste) { const pct = Math.round((15 - Math.min(15, a.dias)) / 15 * 100);
     return `<button class="plano-banner" onclick="go('premium',{cur:null})"><span class="pb-ic">${IC.crown}</span><span class="pb-txt"><b>Teste grátis: faltam ${a.dias} dia${a.dias === 1 ? '' : 's'}</b><small>Tudo liberado até ${fmtD(a.ate)}. Assine para continuar depois.</small><span class="pb-bar"><i style="width:${pct}%"></i></span></span><span class="pb-go">Ver planos</span></button>`; }
   if (a.dias <= 10 && a.plano !== 'mensal' && a.plano !== 'anual') return `<button class="plano-banner vence" onclick="go('premium',{cur:null})"><span class="pb-ic">${IC.crown}</span><span class="pb-txt"><b>Seu acesso vence em ${a.dias} dia${a.dias === 1 ? '' : 's'}</b><small>Válido até ${fmtD(a.ate)}. Renove para não ficar em modo somente leitura.</small></span><span class="pb-go">Renovar</span></button>`;
