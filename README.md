@@ -6,7 +6,7 @@ Site institucional do Appsico (prontuário eletrônico para psicólogos), public
 - `index.html` — página principal
 - `privacidade.html` — política de privacidade (use este link na Google Play)
 - `assets/logo.png` — símbolo do logo (cabeça com Ψ); `assets/logo-completo.png` — logo com o nome; `assets/favicon.png` — ícone da aba
-- `assets/fotos/` — fotos usadas no site
+- `assets/fotos/` — fotos de bem-estar usadas no site (topo, faixa central, "Cuidar de quem cuida", sigilo e download)
 - `assets/telas/` — telas reais do app (pacientes fictícios de demonstração)
 - `downloads/appsico.apk` — APK do app (versão 3.5). Para atualizar, substitua por um novo com o mesmo nome
 
