@@ -7,7 +7,7 @@ Enquanto `app/config.js` estiver sem os dados do Supabase, o Appsico funciona co
 - os prontuários são **criptografados no aparelho** antes de ir para a nuvem
   (nem você, como dono do Appsico, consegue ler);
 - celular (app Android) e computador (navegador, em `/app/`) ficam sincronizados;
-- depois dos 15 dias, sem assinar, ele fica no **plano grátis**: usa tudo com até 5 pacientes (os 5 primeiros), não cadastra o 6º em diante, e os pacientes além do limite ficam só para consulta;
+- depois dos 15 dias, sem assinar, o app fica em **modo consulta**: vê e exporta todos os prontuários, mas não registra nada novo (nem pacientes, sessões, agenda ou financeiro). O servidor também recusa gravações (7 dias de tolerância para enviar o que foi feito antes de vencer). O app confere a assinatura pela internet pelo menos a cada 7 dias;
 - o **app Android só é baixado de dentro da conta**, por um link temporário, por quem está no teste ou com assinatura ativa.
 
 Faça na ordem. Total: uns 40 minutos.

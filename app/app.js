@@ -545,11 +545,11 @@ const BENEF = [
 function billingReal() { return !!(window.AppsicoNative && typeof AppsicoNative.billingBuy === 'function'); }
 function plano() { return (DB && DB.plano) || null; }
 function premium() {
-  if (typeof cloudLinked === 'function' && cloudLinked()) return true; // na nuvem, tudo liberado (plano grátis limita só pacientes)
+  if (typeof cloudLinked === 'function' && cloudLinked()) return true; // na nuvem, o controle é pela assinatura (modo consulta em cloud.js)
   const p = plano(); if (!p) return false;
   return !!p.ate && p.ate >= today();
 }
-function podeNovoPaciente() { if (typeof cloudLinked === 'function' && cloudLinked()) return !planoGratis() || DB.patients.length < LIMITE_GRATIS; return premium() || DB.patients.length < BILL.limiteGratis; }
+function podeNovoPaciente() { if (typeof cloudLinked === 'function' && cloudLinked()) return !planoGratis(); return premium() || DB.patients.length < BILL.limiteGratis; }
 function temaBloq(k) { return !premium() && !BILL.temasGratis.includes(k); }
 function checaTemaPlano() { if (DB && temaBloq(pref.get('theme', 'padrao'))) { pref.set('theme', 'padrao'); applyTheme(); } }
 function nomePlano(id) { return (PLANOS.find(x => x.id === id) || {}).nome || 'Premium'; }
@@ -580,7 +580,8 @@ function bannerPlano() {
     <span class="pb-bar"><i style="width:${pct}%"></i></span></span><span class="pb-go">Ver planos</span></button>`;
 }
 const PAYWALL = {
-  gratis: ['Plano grátis: até 5 pacientes', 'Seu teste de 15 dias terminou. Você continua usando tudo normalmente com os seus 5 primeiros pacientes; os demais ficam só para consulta. Para cadastrar ou alterar outros pacientes, assine o Appsico.'],
+  gratis: ['Modo consulta', 'Sem assinatura ativa, o Appsico só permite ver e exportar os prontuários. Para registrar sessões, cadastrar pacientes, agenda e financeiro, assine o Appsico. Nenhum dado foi apagado.'],
+  conferir: ['Conecte à internet', 'Faz mais de 7 dias que o app não confere sua assinatura. Conecte o aparelho à internet para continuar registrando. Ver e exportar continua liberado.'],
   pacientes: ['Limite do plano grátis', `O plano grátis guarda até ${BILL.limiteGratis} prontuários. Seus pacientes atuais continuam disponíveis; para cadastrar mais, assine o Premium.`],
   fin: ['Financeiro é Premium', 'Contas a receber, contas a pagar, o calendário financeiro e o relatório do contador fazem parte do Premium.'],
   pix: ['Cobrança por Pix é Premium', 'Gerar o QR Code e o Pix copia e cola para o paciente faz parte do Premium.'],
@@ -856,7 +857,7 @@ const FAQ = [
   ['Vou trocar de celular. Como levo meus dados?', 'Com a conta na nuvem, basta instalar o Appsico no celular novo e entrar com seu e-mail e senha. Sem conta, faça um backup no celular antigo e restaure no novo com o código de recuperação.'],
   ['Como confirmo as consultas pelo WhatsApp?', 'Em Lembretes, escolha o dia e toque em Enviar em cada paciente: o WhatsApp abre com a mensagem pronta. Quando ele responder, toque em Confirmou.'],
   ['O app segue as orientações do CFP?', 'O prontuário é organizado nas seções de registro documental orientadas pelo Conselho Federal de Psicologia, com anotações privadas separadas, e os modelos de documentos seguem a estrutura da Resolução CFP nº 06/2019. O conteúdo e a guarda dos registros continuam sendo responsabilidade do profissional.'],
-  ['Como funciona a assinatura e como cancelo?', 'Toda conta nova tem 15 dias grátis com tudo liberado. Depois, sem assinar, você continua no plano grátis com até 5 pacientes (os demais ficam só para consulta). Os planos Mensal e Anual liberam pacientes ilimitados, são cobrados no cartão pelo Mercado Pago e podem ser cancelados a qualquer momento. O Anual no Pix é um pagamento único que vale 1 ano.'],
+  ['Como funciona a assinatura e como cancelo?', 'Toda conta nova tem 15 dias grátis com tudo liberado. Depois, o app funciona enquanto a assinatura estiver ativa. Sem assinatura, ele fica em modo consulta: você vê e exporta todos os prontuários, mas não registra nada novo, e nenhum dado é apagado. O app confere a assinatura pela internet pelo menos a cada 7 dias. Os planos Mensal e Anual são cobrados no cartão pelo Mercado Pago e podem ser cancelados a qualquer momento. O Anual no Pix é um pagamento único que vale 1 ano.'],
   ['Por que não consigo tirar print da tela?', 'Por sigilo: o Appsico bloqueia capturas de tela para que informações de pacientes não fiquem salvas na galeria nem apareçam na lista de apps recentes.']
 ];
 const POLITICA = [
@@ -942,7 +943,7 @@ function paneHome(m) {
       const ini = (p.ident.nome || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(s => s[0]).join('').toUpperCase();
       return `<div class="pcard" onclick="openP('${p.id}')">${avatarHTML(p)}<div style="flex:1;min-width:0">
         <b>${esc(p.ident.nome || '(sem nome)')}</b><span>${a !== null ? a + ' anos · ' : ''}${last ? 'última sessão ' + fmtD(last) : 'sem sessões'}</span>${(() => { const n = proxAg(p.id); return n ? `<span class="prox">${IC.cal} ${fmtD(n.data)} às ${n.hora}</span>` : ''; })()}</div>
-        ${typeof pacienteBloqueado === 'function' && pacienteBloqueado(p.id) ? '<span class="tag warn">só consulta</span>' : p.status === 'encerrado' ? '<span class="tag off">encerrado</span>' : needResp ? '<span class="tag warn">responsável</span>' : ''}
+        ${typeof pacienteBloqueado === 'function' && pacienteBloqueado(p.id) ? '<span class="tag warn">consulta</span>' : p.status === 'encerrado' ? '<span class="tag off">encerrado</span>' : needResp ? '<span class="tag warn">responsável</span>' : ''}
         <button class="pdel" title="Excluir paciente" aria-label="Excluir paciente" onclick="event.stopPropagation();delPatient('${p.id}')">${IC.trash}</button></div>`;
     }).join('')}</div>`
     : `<div class="empty"><img src="logo.png" alt=""><h2>${DB.patients.length ? 'Nenhum paciente encontrado' : 'Nenhum prontuário ainda'}</h2><p>${DB.patients.length ? 'Ajuste a busca ou o filtro.' : 'Crie o primeiro prontuário para começar.'}</p></div>`}`;
@@ -1013,7 +1014,7 @@ const DICA_ETAPA = {
   encaminhamentos: ['Encaminhamento e alta', 'Registre encaminhamentos e, ao final, o encerramento.']
 };
 function fluxoHTML(p) {
-  if (typeof pacienteBloqueado === 'function' && pacienteBloqueado(p.id)) return `<div class="note warn" style="cursor:pointer" onclick="go('premium',{cur:null})"><b>Paciente só para consulta.</b> No plano grátis, só os 5 primeiros pacientes podem ser alterados. Você pode ver e exportar este prontuário; para registrar sessões, assine o Appsico.</div>` + fluxoHTMLBase(p);
+  if (typeof pacienteBloqueado === 'function' && pacienteBloqueado(p.id)) return `<div class="note warn" style="cursor:pointer" onclick="go('premium',{cur:null})"><b>Modo consulta.</b> Sem assinatura ativa, você pode ver e exportar este prontuário, mas não registrar nada novo. Toque aqui para assinar.</div>` + fluxoHTMLBase(p);
   return fluxoHTMLBase(p);
 }
 function fluxoHTMLBase(p) {

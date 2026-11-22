@@ -118,6 +118,11 @@ returns bigint language plpgsql security definer set search_path = public as $$
 declare v bigint;
 begin
   if auth.uid() is null then raise exception 'não autenticado'; end if;
+  -- sem assinatura ativa não grava (7 dias de tolerância para enviar o que foi feito antes de vencer)
+  if not exists (select 1 from perfis p where p.id = auth.uid()
+                  and greatest(p.teste_ate, coalesce(p.valido_ate, p.teste_ate)) + interval '7 days' > now()) then
+    raise exception 'sem_assinatura';
+  end if;
   update cofres set dados = p_dados, versao = versao + 1, dispositivo = p_disp, atualizado_em = now()
    where user_id = auth.uid() and versao = p_base
    returning versao into v;

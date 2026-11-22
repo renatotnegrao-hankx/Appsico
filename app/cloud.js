@@ -96,7 +96,7 @@ function setSync(st, msg) {
 function syncBadge() {
   if (!cloudLinked()) return '<span id="syncSt"></span>';
   const t = SYNC.at ? SYNC.at.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
-  const txt = { ok: `Sincronizado${t ? ' às ' + t : ''}`, sync: 'Sincronizando…', pend: 'Alterações a enviar', off: 'Sem internet — envia depois', login: 'Entre de novo para sincronizar', ro: 'Somente leitura', err: 'Erro ao sincronizar' }[SYNC.st] || '';
+  const txt = { ok: `Sincronizado${t ? ' às ' + t : ''}`, sync: 'Sincronizando…', pend: 'Alterações a enviar', off: 'Sem internet — envia depois', login: 'Entre de novo para sincronizar', ro: 'Modo consulta', err: 'Erro ao sincronizar' }[SYNC.st] || '';
   return `<button id="syncSt" class="sync-st s-${SYNC.st}" onclick="${SYNC.st === 'login' ? 'cloudReauth()' : 'syncNow(true)'}" title="${esc(SYNC.msg || txt)}"><i></i><span>${txt}</span></button>`;
 }
 function cloudDirty() { if (!cloudLinked()) return; if (SYNC.st === 'ok') setSync('pend'); clearTimeout(syncTimer); syncTimer = setTimeout(() => syncNow(), 3000); }
@@ -138,7 +138,7 @@ async function syncNow(manual) {
         const precisaEnviar = remote ? atual !== remoteH : !(base && atual === base.h);
         if (!precisaEnviar) { await setBase(DB); await persist(); snapPacientes(); setSync('ok'); return; }
         const { data: nv, error: e3 } = await sb.rpc('salvar_cofre', { p_dados: await encJSON(DB), p_base: h.versao, p_disp: DISP });
-        if (e3) throw e3;
+        if (e3) { if (/sem_assinatura/.test(String(e3.message))) { await setBase(DB); await persist(); snapPacientes(); setSync('ro', 'Modo consulta: sem assinatura ativa'); return; } throw e3; }
         if (nv) { V.cloud.ver = nv; await setBase(DB); await persist(); setSync('ok'); return; }
         // outro aparelho salvou antes: busca de novo, mescla e tenta outra vez
       }
@@ -177,33 +177,39 @@ async function refreshAcesso() {
   if (data) { V.cloud.acesso = data; V.cloud.acessoEm = Date.now(); V.cloud.offset = new Date(data.agora).getTime() - Date.now(); await writeVault().catch(() => {}); }
   return data;
 }
+// Regra de acesso (decisão do dono do app):
+// - 15 dias de teste grátis com tudo liberado, depois só com assinatura ativa;
+// - sem assinatura ativa o app NÃO registra nada novo: só deixa ver e exportar os prontuários
+//   (o psicólogo é obrigado pelo CFP a guardar e poder acessar os registros);
+// - sem internet o app funciona até o vencimento conhecido, mas precisa conferir a
+//   assinatura no servidor pelo menos a cada 7 dias (e não aceita relógio atrasado).
+const DIAS_OFFLINE = 7;
 function acessoInfo() {
   const a = V && V.cloud && V.cloud.acesso; if (!a) return { ativo: true, teste: true, dias: 15, desconhecido: true };
   const agora = Date.now() + (V.cloud.offset || 0);
   const teste = a.teste_ate ? new Date(a.teste_ate).getTime() : 0, pago = a.valido_ate ? new Date(a.valido_ate).getTime() : 0;
-  const ativo = Math.max(teste, pago) > agora, emTeste = teste > agora && !(pago > agora);
+  const emDia = Math.max(teste, pago) > agora, emTeste = teste > agora && !(pago > agora);
   const fim = emTeste ? teste : pago;
-  return { ativo, teste: emTeste, plano: a.plano, ate: fim ? new Date(fim).toISOString().slice(0, 10) : null, dias: fim ? Math.max(0, Math.ceil((fim - agora) / 864e5)) : 0, admin: !!a.admin };
+  // conferência periódica: última resposta do servidor há mais de 7 dias, ou relógio voltou no tempo
+  const ultima = a.agora ? new Date(a.agora).getTime() : 0;
+  const conferir = emDia && !!ultima && (agora - ultima > DIAS_OFFLINE * 864e5 || agora < ultima - 36e5);
+  return { ativo: emDia && !conferir, conferir, teste: emTeste, plano: a.plano, ate: fim ? new Date(fim).toISOString().slice(0, 10) : null, dias: fim ? Math.max(0, Math.ceil((fim - agora) / 864e5)) : 0, admin: !!a.admin };
 }
-// Depois do teste sem assinatura: plano grátis. Os 5 pacientes mais antigos continuam com tudo
-// liberado; os demais ficam só para consulta e não é possível cadastrar o 6º paciente em diante.
-const LIMITE_GRATIS = 5;
+// Sem acesso ativo: modo consulta. Nenhum paciente pode ser cadastrado ou alterado,
+// nem agenda, financeiro, documentos etc. Ver e exportar continua liberado.
+const LIMITE_GRATIS = 0;
 const planoGratis = () => cloudLinked() && !acessoInfo().ativo;
-function idsLiberados() {
-  return new Set(DB.patients.slice().sort((a, b) => String(a.criadoEm || '').localeCompare(String(b.criadoEm || ''))).slice(0, LIMITE_GRATIS).map(p => p.id));
-}
-const pacienteBloqueado = id => planoGratis() && !idsLiberados().has(id);
-let PH = null; // como cada paciente estava na última gravação aceita
-function snapPacientes() { PH = DB ? new Map(DB.patients.map(p => [p.id, fh(p)])) : null; }
+const modoConsulta = planoGratis;
+const pacienteBloqueado = id => modoConsulta();
+let PH = null; // como os dados estavam na última gravação aceita
+function snapPacientes() { PH = DB ? fh(DB) : null; }
 let _bloqAviso = 0;
 function cloudBloqueia() {
-  if (!planoGratis()) { PH = null; return false; }
+  if (!modoConsulta()) { PH = null; return false; }
   if (!PH) { snapPacientes(); return false; }
-  const lib = idsLiberados();
-  const violou = DB.patients.some(p => !lib.has(p.id) && PH.get(p.id) !== fh(p));
-  if (!violou) { snapPacientes(); return false; }
+  if (PH === fh(DB)) return false;
   // desfaz a alteração: volta ao último estado salvo neste aparelho
-  (async () => { try { if (V.data) DB = await decJSON(DEK, V.data); } catch (e) {} snapPacientes(); closeModal(); render(); if (Date.now() - _bloqAviso > 1500) { _bloqAviso = Date.now(); paywall('gratis'); } })();
+  (async () => { try { if (V.data) DB = await decJSON(DEK, V.data); } catch (e) {} snapPacientes(); closeModal(); render(); if (Date.now() - _bloqAviso > 1500) { _bloqAviso = Date.now(); paywall(acessoInfo().conferir ? 'conferir' : 'gratis'); } })();
   return true;
 }
 const PLANOS_NUVEM = [
@@ -502,7 +508,7 @@ function contaCard() {
     <p style="margin:0 0 10px">Ative sua conta para sincronizar os prontuários entre o celular e o computador. Tudo vai <b>criptografado</b>: ninguém além de você consegue ler.</p>
     <div class="row-actions" style="justify-content:flex-start"><button class="pri" onclick="cloudLigar()">Ativar conta na nuvem</button></div></div></details>`;
   const a = acessoInfo();
-  const st = a.desconhecido ? 'Verificando…' : a.teste ? `Teste grátis: ${a.dias} dia${a.dias === 1 ? '' : 's'} restante${a.dias === 1 ? '' : 's'}` : a.ativo ? `Assinatura ${nomePlanoN(a.plano)} · até ${fmtD(a.ate)}` : `Plano grátis: até ${LIMITE_GRATIS} pacientes`;
+  const st = a.desconhecido ? 'Verificando…' : a.teste ? `Teste grátis: ${a.dias} dia${a.dias === 1 ? '' : 's'} restante${a.dias === 1 ? '' : 's'}` : a.ativo ? `Assinatura ${nomePlanoN(a.plano)} · até ${fmtD(a.ate)}` : a.conferir ? 'Conecte à internet para conferir a assinatura' : 'Sem assinatura ativa · modo consulta';
   return `<details class="card acc" open><summary><span class="acc-ic">${IC.backup}</span><span class="acc-t"><b>Conta e nuvem</b><small>${esc(V.cloud.email)}</small></span></summary><div class="acc-body">
     <div class="conta-st ${a.ativo ? (a.teste ? 'teste' : 'ok') : 'fim'}"><b>${esc(st)}</b><span>${syncBadge()}</span></div>
     <div class="row-actions" style="justify-content:flex-start;flex-wrap:wrap">
@@ -523,10 +529,10 @@ const nomePlanoN = id => ({ mensal: 'mensal', anual: 'anual', anualpix: 'anual (
 /* ---------- tela de planos (nuvem) ---------- */
 function panePremiumNuvem(m) {
   const a = acessoInfo(), sel = S.planoSel || 'anual';
-  m.innerHTML = `<div class="head"><div><h1>Assinatura Appsico</h1><div class="meta">${a.teste ? `Teste grátis até ${fmtD(a.ate)} (${a.dias} dia${a.dias === 1 ? '' : 's'})` : a.ativo ? `Assinatura ${nomePlanoN(a.plano)} ativa até ${fmtD(a.ate)}` : `Seu teste terminou — você está no plano grátis (até ${LIMITE_GRATIS} pacientes)`}</div></div>${sairBtn()}</div>
+  m.innerHTML = `<div class="head"><div><h1>Assinatura Appsico</h1><div class="meta">${a.teste ? `Teste grátis até ${fmtD(a.ate)} (${a.dias} dia${a.dias === 1 ? '' : 's'})` : a.ativo ? `Assinatura ${nomePlanoN(a.plano)} ativa até ${fmtD(a.ate)}` : a.conferir ? 'Conecte à internet para conferir sua assinatura' : 'Sem assinatura ativa: o app está em modo consulta'}</div></div>${sairBtn()}</div>
     <div class="prem-hero"><span class="ph-ic">${IC.crown}</span><div><b>${a.ativo && !a.teste ? 'Obrigado por assinar o Appsico!' : 'Continue com tudo o que você já usa'}</b>
       <small>Prontuários criptografados no celular e no computador, agenda, lembretes, documentos, financeiro e Pix. Cancele quando quiser.</small></div></div>
-    ${!a.ativo ? `<div class="note warn">No plano grátis você continua usando tudo normalmente com os seus ${LIMITE_GRATIS} primeiros pacientes. Os demais ficam só para consulta e exportação, e não é possível cadastrar novos. Assine para liberar pacientes ilimitados.</div>` : ''}
+    ${!a.ativo ? (a.conferir ? `<div class="note warn">Faz mais de ${DIAS_OFFLINE} dias que o app não confere sua assinatura. Conecte o aparelho à internet e toque em "Já paguei — atualizar". Enquanto isso, você pode ver e exportar os prontuários.</div>` : `<div class="note warn">Sem assinatura ativa, o Appsico fica em <b>modo consulta</b>: você vê e exporta todos os prontuários (em PDF), mas não registra sessões, pacientes, agenda ou financeiro. Nenhum dado é apagado. Assine e tudo volta a funcionar na hora.</div>`) : ''}
     <div class="planos">${PLANOS_NUVEM.map(x => `<button class="plano ${sel === x.id ? 'on' : ''}" onclick="S.planoSel='${x.id}';panePremiumNuvem($('main'))">
       ${x.tag ? `<span class="pl-tag">${x.tag}</span>` : ''}<span class="pl-radio"></span><b>${x.nome}</b><span class="pl-preco">${x.preco}</span><small>${x.per}</small><small class="pl-obs">${x.obs}</small></button>`).join('')}</div>
     <div class="row-actions prem-act"><button class="pri big" onclick="cloudAssinar('${sel}')">${IC.crown} ${sel === 'anualpix' ? 'Pagar' : 'Assinar'} ${PLANOS_NUVEM.find(x => x.id === sel).nome} · ${PLANOS_NUVEM.find(x => x.id === sel).preco}</button></div>
@@ -535,11 +541,12 @@ function panePremiumNuvem(m) {
 }
 function bannerNuvem() {
   const a = acessoInfo(); if (a.desconhecido) return '';
-  if (!a.ativo) { const n = DB.patients.length;
-    return `<button class="plano-banner fim" onclick="go('premium',{cur:null})"><span class="pb-ic">${IC.lock}</span><span class="pb-txt"><b>Plano grátis · ${Math.min(n, LIMITE_GRATIS)} de ${LIMITE_GRATIS} pacientes</b><small>${n > LIMITE_GRATIS ? `Seu teste terminou: ${n - LIMITE_GRATIS} paciente${n - LIMITE_GRATIS > 1 ? 's ficam' : ' fica'} só para consulta.` : 'Seu teste terminou.'} Assine para pacientes ilimitados.</small></span><span class="pb-go">Assinar</span></button>`; }
+  if (!a.ativo) return a.conferir
+    ? `<button class="plano-banner fim" onclick="conferirPagamento()"><span class="pb-ic">${IC.lock}</span><span class="pb-txt"><b>Conecte à internet</b><small>Faz mais de ${DIAS_OFFLINE} dias que o app não confere sua assinatura. Até lá, só consulta e exportação.</small></span><span class="pb-go">Conferir</span></button>`
+    : `<button class="plano-banner fim" onclick="go('premium',{cur:null})"><span class="pb-ic">${IC.lock}</span><span class="pb-txt"><b>Modo consulta</b><small>${a.teste === false && a.plano ? 'Sua assinatura venceu.' : 'Seu teste grátis terminou.'} Você vê e exporta os prontuários. Assine para voltar a registrar.</small></span><span class="pb-go">Assinar</span></button>`;
   if (a.teste) { const pct = Math.round((15 - Math.min(15, a.dias)) / 15 * 100);
     return `<button class="plano-banner" onclick="go('premium',{cur:null})"><span class="pb-ic">${IC.crown}</span><span class="pb-txt"><b>Teste grátis: faltam ${a.dias} dia${a.dias === 1 ? '' : 's'}</b><small>Tudo liberado até ${fmtD(a.ate)}. Assine para continuar depois.</small><span class="pb-bar"><i style="width:${pct}%"></i></span></span><span class="pb-go">Ver planos</span></button>`; }
-  if (a.dias <= 10 && a.plano !== 'mensal' && a.plano !== 'anual') return `<button class="plano-banner vence" onclick="go('premium',{cur:null})"><span class="pb-ic">${IC.crown}</span><span class="pb-txt"><b>Seu acesso vence em ${a.dias} dia${a.dias === 1 ? '' : 's'}</b><small>Válido até ${fmtD(a.ate)}. Renove para não ficar em modo somente leitura.</small></span><span class="pb-go">Renovar</span></button>`;
+  if (a.dias <= 10 && a.plano !== 'mensal' && a.plano !== 'anual') return `<button class="plano-banner vence" onclick="go('premium',{cur:null})"><span class="pb-ic">${IC.crown}</span><span class="pb-txt"><b>Seu acesso vence em ${a.dias} dia${a.dias === 1 ? '' : 's'}</b><small>Válido até ${fmtD(a.ate)}. Renove para não ficar em modo consulta.</small></span><span class="pb-go">Renovar</span></button>`;
   return '';
 }
 
