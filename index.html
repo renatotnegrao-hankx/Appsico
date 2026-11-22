@@ -8,7 +8,8 @@
 <meta property="og:title" content="Appsico — Prontuário eletrônico para psicólogos">
 <meta property="og:description" content="Prontuário seguro, simples e alinhado ao CFP. Seus dados ficam no seu aparelho.">
 <meta property="og:type" content="website">
-<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<meta property="og:image" content="assets/telas/prontuario.webp">
+<link rel="icon" href="assets/logo.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -27,7 +28,7 @@
   header{position:sticky;top:0;z-index:10;background:rgba(247,249,251,.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
   .nav{display:flex;align-items:center;justify-content:space-between;height:66px}
   .brand{display:flex;align-items:center;gap:10px;font-family:Fraunces,serif;font-size:1.35rem;font-weight:600;color:var(--ink)}
-  .brand img{width:36px;height:36px}
+  .brand img{width:36px;height:36px;border-radius:10px}
   .nav ul{display:flex;gap:26px;list-style:none;align-items:center}
   .nav ul a{color:var(--muted);font-weight:500;font-size:.95rem}
   .nav ul a:hover{color:var(--ink)}
@@ -36,6 +37,7 @@
   .btn.ghost{background:transparent;color:var(--primary);border:1.5px solid var(--primary)}
   .btn.ghost:hover{background:var(--soft)}
   .nav .btn{padding:9px 16px;font-size:.9rem}
+  .nav ul a.btn{color:#fff}
   .menu-toggle{display:none}
 
   .hero{padding:80px 0 70px}
@@ -47,7 +49,30 @@
   .cta{display:flex;gap:12px;flex-wrap:wrap}
   .small{color:var(--muted);font-size:.85rem;margin-top:14px}
 
-  .phone{justify-self:center;width:270px;height:540px;background:#0f172a;border-radius:38px;padding:12px;box-shadow:0 30px 60px -20px rgba(29,43,58,.35)}
+  .phone{justify-self:center;width:290px;background:#0f172a;border-radius:42px;padding:11px;box-shadow:0 30px 60px -20px rgba(29,43,58,.45);position:relative}
+  .phone img{display:block;width:100%;height:auto;border-radius:32px;aspect-ratio:390/844;object-fit:cover;object-position:top}
+  .phone::after{content:"";position:absolute;top:20px;left:50%;width:70px;height:6px;margin-left:-35px;border-radius:4px;background:#0f172a;opacity:.0}
+  .hero-shots{position:relative;justify-self:center;display:flex;align-items:flex-end}
+  .hero-shots .phone.back{width:230px;margin-right:-70px;transform:rotate(-6deg) translateY(18px);opacity:.95}
+  .hero-shots .phone.front{z-index:2}
+
+  .gal{display:flex;gap:22px;overflow-x:auto;scroll-snap-type:x mandatory;padding:6px 22px 26px;margin:0 -22px;scrollbar-width:thin}
+  .shot{flex:0 0 230px;scroll-snap-align:center;text-align:center;cursor:zoom-in}
+  .shot .frame{background:#0f172a;border-radius:34px;padding:8px;box-shadow:0 18px 40px -18px rgba(29,43,58,.45);transition:transform .2s}
+  .shot:hover .frame{transform:translateY(-4px)}
+  .shot img{display:block;width:100%;height:auto;border-radius:27px;aspect-ratio:390/844;object-fit:cover;object-position:top;background:#eef1ff}
+  .shot b{display:block;margin-top:14px;font-size:1rem}
+  .shot span{display:block;color:var(--muted);font-size:.88rem;line-height:1.4;margin-top:2px}
+  .gal-nav{display:flex;justify-content:center;gap:10px;margin-top:4px}
+  .gal-nav button{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:1.2rem;cursor:pointer;color:var(--ink)}
+  .tablet{margin:50px auto 0;max-width:900px;background:#0f172a;border-radius:26px;padding:12px;box-shadow:0 30px 60px -24px rgba(29,43,58,.45);cursor:zoom-in}
+  .tablet img{display:block;width:100%;height:auto;border-radius:16px}
+  .tablet-cap{text-align:center;color:var(--muted);margin-top:14px;font-size:.95rem}
+  .lb{position:fixed;inset:0;background:rgba(10,15,30,.9);display:none;align-items:center;justify-content:center;z-index:50;padding:20px;cursor:zoom-out}
+  .lb.open{display:flex}
+  .lb img{max-width:100%;max-height:92vh;border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .dl-meta{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+  .dl-meta span{background:rgba(255,255,255,.16);border-radius:999px;padding:5px 12px;font-size:.85rem}
   .screen{background:#fff;height:100%;border-radius:28px;padding:22px 18px;display:flex;flex-direction:column;gap:12px;overflow:hidden}
   .screen .top{display:flex;align-items:center;gap:8px;font-weight:600;font-family:Fraunces,serif}
   .screen .top img{width:26px}
@@ -117,7 +142,7 @@
 
   @media (max-width:900px){
     .hero-grid,.cfp-grid{grid-template-columns:1fr}
-    .phone{display:none}
+    .hero-shots{margin-top:10px}.hero-shots .phone.back{display:none}.phone{width:250px}
     .grid3,.steps{grid-template-columns:1fr}
     .plans{grid-template-columns:1fr 1fr}
     .nav ul{display:none}
@@ -132,9 +157,10 @@
 
 <header>
   <div class="wrap nav">
-    <a href="#" class="brand"><img src="assets/logo.svg" alt="">Appsico</a>
+    <a href="#" class="brand"><img src="assets/logo.png" alt="">Appsico</a>
     <button class="menu-toggle" aria-label="Abrir menu" onclick="document.getElementById('menu').classList.toggle('open')">☰</button>
     <ul id="menu">
+      <li><a href="#telas">Veja o app</a></li>
       <li><a href="#recursos">Recursos</a></li>
       <li><a href="#cfp">CFP e sigilo</a></li>
       <li><a href="#planos">Planos</a></li>
@@ -153,20 +179,38 @@
         <p>O Appsico organiza seus atendimentos de acordo com as diretrizes do Conselho Federal de Psicologia. Os dados ficam criptografados no seu próprio aparelho e são protegidos por PIN.</p>
         <div class="cta">
           <a href="#baixar" class="btn">Baixar para Android</a>
-          <a href="#recursos" class="btn ghost">Conhecer recursos</a>
+          <a href="#telas" class="btn ghost">Ver o app por dentro</a>
         </div>
         <p class="small">Comece grátis. Disponível para celular e tablet Android.</p>
       </div>
-      <div class="phone" aria-hidden="true">
-        <div class="screen">
-          <div class="top"><img src="assets/logo.svg" alt="">Appsico</div>
-          <div class="s-card"><b>Paciente M. S.</b><span>Evolução · sessão 8</span><div class="s-bar"><i style="width:65%"></i></div></div>
-          <div class="s-card"><b>Demanda e objetivos</b><span>Atualizado hoje</span></div>
-          <div class="s-card"><b>Documentos</b><span>2 declarações · 1 relatório</span></div>
-          <div class="s-card"><b>Encaminhamentos</b><span>Nenhum pendente</span></div>
-          <div class="pin"><i></i><i></i><i></i><i></i><i class="o"></i><i class="o"></i></div>
-        </div>
+      <div class="hero-shots">
+        <div class="phone back"><img src="assets/telas/inicio.webp" alt="Tela inicial do Appsico" width="390" height="844"></div>
+        <div class="phone front"><img src="assets/telas/prontuario.webp" alt="Prontuário de uma paciente no Appsico, com o fluxo do atendimento" width="390" height="844"></div>
       </div>
+    </div>
+  </section>
+
+  <section id="telas">
+    <div class="wrap">
+      <div class="head">
+        <h2>Veja o app por dentro</h2>
+        <p>Telas reais do Appsico, com pacientes fictícios de demonstração.</p>
+      </div>
+      <div class="gal" id="gal">
+        <figure class="shot"><div class="frame"><img src="assets/telas/inicio.webp" alt="Tela inicial" loading="lazy" width="390" height="844"></div><b>Tela inicial</b><span>Consultas do dia, próxima consulta e atalhos para tudo.</span></figure>
+        <figure class="shot"><div class="frame"><img src="assets/telas/prontuario.webp" alt="Fluxo do atendimento" loading="lazy" width="390" height="844"></div><b>Fluxo do atendimento</b><span>Do cadastro à alta, com o próximo passo sempre indicado.</span></figure>
+        <figure class="shot"><div class="frame"><img src="assets/telas/sessoes.webp" alt="Sessões com data e hora" loading="lazy" width="390" height="844"></div><b>Sessões com data e hora</b><span>Cada relato fica registrado com início, fim e pagamento.</span></figure>
+        <figure class="shot"><div class="frame"><img src="assets/telas/linha-do-tempo.webp" alt="Linha do tempo" loading="lazy" width="390" height="844"></div><b>Linha do tempo</b><span>Todo o histórico do paciente em ordem cronológica.</span></figure>
+        <figure class="shot"><div class="frame"><img src="assets/telas/diagnostico.webp" alt="Avaliação e diagnóstico" loading="lazy" width="390" height="844"></div><b>Avaliação e diagnóstico</b><span>Instrumentos, CID e reavaliações registrados.</span></figure>
+        <figure class="shot"><div class="frame"><img src="assets/telas/agenda.webp" alt="Agenda" loading="lazy" width="390" height="844"></div><b>Agenda</b><span>Calendário do mês e dia hora a hora.</span></figure>
+        <figure class="shot"><div class="frame"><img src="assets/telas/lembretes.webp" alt="Lembretes no WhatsApp" loading="lazy" width="390" height="844"></div><b>Lembretes no WhatsApp</b><span>Confirme as consultas de amanhã em um toque.</span></figure>
+        <figure class="shot"><div class="frame"><img src="assets/telas/documentos.webp" alt="Documentos do CFP" loading="lazy" width="390" height="844"></div><b>Documentos do CFP</b><span>Relatório, parecer, declaração e encaminhamento prontos.</span></figure>
+        <figure class="shot"><div class="frame"><img src="assets/telas/financeiro.webp" alt="Financeiro" loading="lazy" width="390" height="844"></div><b>Financeiro</b><span>Entradas, saídas e saldo de cada dia.</span></figure>
+        <figure class="shot"><div class="frame"><img src="assets/telas/contador.webp" alt="Relatório do contador" loading="lazy" width="390" height="844"></div><b>Relatório do contador</b><span>Recebimentos com CPF para o Carnê-Leão.</span></figure>
+      </div>
+      <div class="gal-nav"><button aria-label="Anterior" onclick="document.getElementById('gal').scrollBy({left:-260,behavior:'smooth'})">‹</button><button aria-label="Próxima" onclick="document.getElementById('gal').scrollBy({left:260,behavior:'smooth'})">›</button></div>
+      <div class="tablet"><img src="assets/telas/tablet-prontuario.webp" alt="Appsico no tablet, com menu lateral e prontuário" loading="lazy" width="1600" height="1000"></div>
+      <p class="tablet-cap">No tablet, o menu lateral fica sempre à mão.</p>
     </div>
   </section>
 
@@ -177,12 +221,12 @@
         <p>Feito para a rotina clínica: rápido de preencher, fácil de consultar e seguro de guardar.</p>
       </div>
       <div class="grid3">
-        <div class="card"><div class="ic">🗂️</div><h3>Identificação e demanda</h3><p>Cadastro do paciente, demanda inicial e objetivos de trabalho em campos organizados.</p></div>
-        <div class="card"><div class="ic">📝</div><h3>Evolução das sessões</h3><p>Registre cada atendimento em ordem cronológica e consulte o histórico com poucos toques.</p></div>
-        <div class="card"><div class="ic">📄</div><h3>Documentos</h3><p>Guarde declarações, relatórios, laudos e pareceres junto ao prontuário de cada paciente.</p></div>
-        <div class="card"><div class="ic">🔀</div><h3>Encaminhamentos e encerramento</h3><p>Registre encaminhamentos e o encerramento do acompanhamento, como orienta o CFP.</p></div>
-        <div class="card"><div class="ic">🔒</div><h3>Criptografia no aparelho</h3><p>O banco de dados fica criptografado no seu celular ou tablet. Ninguém além de você acessa.</p></div>
-        <div class="card"><div class="ic">🔢</div><h3>Acesso por PIN</h3><p>Entrada rápida com PIN de 6 dígitos e redefinição pelo e-mail cadastrado.</p></div>
+        <div class="card"><div class="ic">🧭</div><h3>Fluxo do atendimento</h3><p>Cadastro, demanda, avaliação e diagnóstico, plano terapêutico, sessões e alta, nessa ordem e com o próximo passo indicado.</p></div>
+        <div class="card"><div class="ic">📝</div><h3>Sessões com data e hora</h3><p>Cada relato fica salvo com data, horário de início e fim. Registros não são apagados: correções viram retificações.</p></div>
+        <div class="card"><div class="ic">📅</div><h3>Agenda e lembretes</h3><p>Calendário com a linha do tempo do dia e lembretes de consulta pelo WhatsApp em um toque.</p></div>
+        <div class="card"><div class="ic">📄</div><h3>Documentos prontos</h3><p>Atestado, recibo, relatório e parecer psicológico, declaração e encaminhamento, em PDF ou pelo WhatsApp.</p></div>
+        <div class="card"><div class="ic">💰</div><h3>Financeiro e Pix</h3><p>Contas a receber e a pagar, saldo do dia, cobrança por Pix com QR Code e relatório para o contador.</p></div>
+        <div class="card"><div class="ic">🔒</div><h3>Sigilo de verdade</h3><p>Tudo criptografado só no seu aparelho, acesso por usuário e PIN, bloqueio de prints e backup criptografado no seu Google Drive.</p></div>
       </div>
     </div>
   </section>
@@ -249,7 +293,7 @@
       <div class="head"><h2>Comece em 3 passos</h2></div>
       <div class="steps">
         <div class="step"><h3>Baixe o app</h3><p>Instale o Appsico no seu celular ou tablet Android.</p></div>
-        <div class="step"><h3>Crie seu PIN</h3><p>No primeiro acesso, informe seu e-mail e crie um PIN de 6 dígitos.</p></div>
+        <div class="step"><h3>Crie seu acesso</h3><p>No primeiro acesso, escolha um nome de usuário e um PIN de 4 números, e guarde o código de recuperação.</p></div>
         <div class="step"><h3>Cadastre pacientes</h3><p>Abra o primeiro prontuário e registre suas sessões.</p></div>
       </div>
     </div>
@@ -260,8 +304,9 @@
       <div class="download">
         <h2>Baixe o Appsico</h2>
         <p>Disponível para Android (celular e tablet). Em breve na Google Play.</p>
-        <a href="downloads/appsico.apk" class="btn" download>⬇ Baixar para Android (APK)</a>
-        <p class="note">Ao instalar pelo arquivo, o Android pode pedir para permitir a instalação de “fontes desconhecidas”. Basta autorizar para o navegador que você usou.</p>
+        <a href="downloads/appsico.apk" class="btn" download="Appsico.apk">⬇ Baixar para Android (APK)</a>
+        <div class="dl-meta"><span>Versão 3.4 · teste</span><span>1,7 MB</span><span>Android 8 ou mais recente</span></div>
+        <p class="note">Ao instalar pelo arquivo, o Android pode pedir para permitir a instalação de “fontes desconhecidas”. Basta autorizar para o navegador que você usou. Esta é uma versão de testes: faça backups com frequência.</p>
       </div>
     </div>
   </section>
@@ -270,8 +315,9 @@
     <div class="wrap faq">
       <div class="head"><h2>Dúvidas frequentes</h2></div>
       <details><summary>Onde ficam guardados os dados dos meus pacientes?</summary><p>No seu próprio aparelho, em um banco de dados criptografado. Eles não são enviados para servidores do Appsico.</p></details>
-      <details><summary>E se eu esquecer meu PIN?</summary><p>Você pode redefinir o PIN pelo e-mail cadastrado no primeiro acesso.</p></details>
+      <details><summary>E se eu esquecer meu PIN?</summary><p>Na tela de entrada, toque em “Esqueci meu PIN” e use o código de recuperação que o app mostrou no primeiro acesso (ou o e-mail cadastrado). Sem o PIN e sem esse código, ninguém consegue abrir os dados — nem a equipe do Appsico.</p></details>
       <details><summary>O Appsico segue as orientações do CFP?</summary><p>Sim. O prontuário foi estruturado com identificação, demanda, objetivos, evolução, encaminhamentos, encerramento e documentos, além do prazo de guarda de 20 anos.</p></details>
+      <details><summary>Como passo meus dados para outro celular?</summary><p>Faça um backup criptografado (no seu Google Drive ou em um arquivo) e restaure no aparelho novo usando o código de recuperação.</p></details>
       <details><summary>Funciona no iPhone?</summary><p>Por enquanto o Appsico está disponível apenas para Android (celular e tablet).</p></details>
       <details><summary>Posso cancelar a assinatura?</summary><p>Sim. O plano mensal pode ser cancelado a qualquer momento. O Anual no Pix vale por 12 meses a partir do pagamento.</p></details>
       <details><summary>Como falo com o suporte?</summary><p>Escreva para <a href="mailto:contato@appsico.com.br">contato@appsico.com.br</a>.</p></details>
@@ -281,12 +327,15 @@
 
 <footer>
   <div class="wrap foot">
-    <div class="brand" style="font-size:1.1rem"><img src="assets/logo.svg" alt="" style="width:28px;height:28px">Appsico</div>
+    <div class="brand" style="font-size:1.1rem"><img src="assets/logo.png" alt="" style="width:28px;height:28px">Appsico</div>
     <div><a href="privacidade.html">Política de privacidade</a> · <a href="mailto:contato@appsico.com.br">contato@appsico.com.br</a></div>
     <div>© <span id="y"></span> Appsico</div>
   </div>
 </footer>
-<script>document.getElementById('y').textContent=new Date().getFullYear();
+<div class="lb" id="lb" onclick="this.classList.remove('open')"><img alt=""></div>
+<script>document.querySelectorAll('.shot img, .tablet img, .phone img').forEach(i=>i.parentElement.addEventListener('click',()=>{const l=document.getElementById('lb');l.querySelector('img').src=i.src;l.querySelector('img').alt=i.alt;l.classList.add('open');}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('lb').classList.remove('open')});
+document.getElementById('y').textContent=new Date().getFullYear();
 document.querySelectorAll('#menu a').forEach(a=>a.addEventListener('click',()=>document.getElementById('menu').classList.remove('open')));</script>
 </body>
 </html>

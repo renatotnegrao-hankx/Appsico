@@ -5,8 +5,9 @@ Site institucional do Appsico (prontuário eletrônico para psicólogos), public
 ## Arquivos
 - `index.html` — página principal
 - `privacidade.html` — política de privacidade (use este link na Google Play)
-- `assets/logo.svg` — logo provisório (substitua pelo logo oficial com o mesmo nome)
-- `downloads/appsico.apk` — coloque aqui o APK do app (o botão de download aponta para esse arquivo)
+- `assets/logo.png` — logo oficial (o `logo.svg` antigo ficou guardado, mas não é mais usado)
+- `assets/telas/` — telas reais do app (pacientes fictícios de demonstração)
+- `downloads/appsico.apk` — APK do app (versão 3.4). Para atualizar, substitua por um novo com o mesmo nome
 
 ## Trocar para o domínio appsico.com.br (quando quiser)
 
