@@ -33,9 +33,9 @@
   .grad-text{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 
   header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-  .nav{display:flex;align-items:center;justify-content:space-between;height:70px}
-  .brand{display:flex;align-items:center;gap:10px;font-family:Poppins,sans-serif;font-weight:700;font-size:1.4rem;color:var(--navy)}
-  .brand img{width:42px;height:42px}
+  .nav{display:flex;align-items:center;justify-content:space-between;height:88px}
+  .brand{display:flex;align-items:center;gap:12px;font-family:Poppins,sans-serif;font-weight:700;font-size:2.1rem;color:var(--navy)}
+  .brand img{width:63px;height:63px}
   .brand span{background:linear-gradient(90deg,#0a2668 0 34%,#0a9cc4 34% 66%,#14bfa5 66%);-webkit-background-clip:text;background-clip:text;color:transparent}
   .nav ul{display:flex;gap:28px;list-style:none;align-items:center}
   .nav ul a{color:var(--muted);font-weight:500;font-size:.95rem}
@@ -209,8 +209,9 @@
   }
   @media (max-width:760px){
     .nav ul{display:none}
-    .nav ul.open{display:flex;flex-direction:column;align-items:flex-start;position:absolute;top:70px;left:0;right:0;background:#fff;padding:22px;border-bottom:1px solid var(--line);gap:18px}
+    .nav ul.open{display:flex;flex-direction:column;align-items:flex-start;position:absolute;top:88px;left:0;right:0;background:#fff;padding:22px;border-bottom:1px solid var(--line);gap:18px}
     .menu-toggle{display:block}
+    .nav{height:76px}.brand{font-size:1.8rem}.brand img{width:54px;height:54px}.nav ul.open{top:76px}
     section{padding:64px 0}
     .hero{padding:44px 0 60px}
     .grid3,.steps,.plans{grid-template-columns:1fr}
@@ -473,7 +474,7 @@
 
 <footer>
   <div class="wrap foot">
-    <div class="brand" style="font-size:1.15rem"><img src="assets/logo.png" alt="" style="width:34px;height:34px;background:#fff;border-radius:10px;padding:2px"><span>Appsico</span></div>
+    <div class="brand" style="font-size:1.75rem"><img src="assets/logo.png" alt="" style="width:51px;height:51px;background:#fff;border-radius:14px;padding:3px"><span>Appsico</span></div>
     <div><a href="privacidade.html">Política de privacidade</a> · <a href="mailto:contato@appsico.com.br">contato@appsico.com.br</a></div>
     <div>© <span id="y"></span> Appsico</div>
   </div>
