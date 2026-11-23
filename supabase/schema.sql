@@ -166,6 +166,19 @@ begin
                         + (select count(*) from a where plano in ('anual', 'anualpix')) * 199.00 / 12, 2),
     'receita_total',(select coalesce(sum(valor),0) from pagamentos where status = 'approved'),
     'receita_mes',  (select coalesce(sum(valor),0) from pagamentos where status = 'approved' and criado_em >= date_trunc('month', now())),
+    'receita_30d',  (select coalesce(sum(valor),0) from pagamentos where status = 'approved' and criado_em > now() - interval '30 days'),
+    'por_plano',    (select json_agg(json_build_object(
+                       'plano', pl.plano,
+                       'ativos', (select count(*) from a where a.plano = pl.plano),
+                       'receita_mes', (select coalesce(sum(valor),0) from pagamentos g where g.status = 'approved' and g.plano = pl.plano and g.criado_em >= date_trunc('month', now())),
+                       'receita_total', (select coalesce(sum(valor),0) from pagamentos g where g.status = 'approved' and g.plano = pl.plano),
+                       'mrr', round((select count(*) from a where a.plano = pl.plano) * pl.mensal, 2)) order by pl.ord)
+                     from (values (1,'mensal',24.90::numeric),(2,'anual',199.00/12),(3,'anualpix',199.00/12),(4,'cortesia',0::numeric)) pl(ord, plano, mensal)),
+    'por_mes',      (select json_agg(json_build_object(
+                       'm', to_char(mm, 'YYYY-MM'),
+                       'v', (select coalesce(sum(valor),0) from pagamentos g where g.status = 'approved' and date_trunc('month', g.criado_em) = mm),
+                       'u', (select count(*) from perfis pf where date_trunc('month', pf.criado_em) = mm)) order by mm)
+                     from generate_series(date_trunc('month', now()) - interval '5 months', date_trunc('month', now()), interval '1 month') mm),
     'recentes',     (select coalesce(json_agg(y), '[]'::json) from (
                        select email, plano, valor, criado_em from pagamentos where status = 'approved' order by criado_em desc limit 10) y)
   ) into r;
@@ -185,7 +198,7 @@ begin
     order by p.criado_em desc limit 300;
 end $$;
 
--- Dar cortesia (30d | 90d | 1y), estender o teste (+15d) ou remover
+-- Dar cortesia (30d | 90d | 1y | vitalicio), estender o teste (+15d) ou remover
 create or replace function public.admin_liberar(alvo uuid, modo text)
 returns void language plpgsql security definer set search_path = public as $$
 begin
@@ -194,11 +207,15 @@ begin
     update perfis set valido_ate = null, plano = null, provedor = null, provedor_ref = null where id = alvo;
   elsif modo = 'teste15' then
     update perfis set teste_ate = greatest(teste_ate, now()) + interval '15 days' where id = alvo;
+  elsif modo not in ('30d', '90d', '1y', 'vitalicio') then
+    raise exception 'opção inválida';
   else
     update perfis set
       valido_ate = case modo when '30d' then now() + interval '30 days'
                              when '90d' then now() + interval '90 days'
-                             else now() + interval '1 year' end,
+                             when '1y'  then now() + interval '1 year'
+                             when 'vitalicio' then '9999-12-31'::timestamptz
+                             end,
       plano = 'cortesia', provedor = 'admin', provedor_ref = modo
     where id = alvo;
   end if;

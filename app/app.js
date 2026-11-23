@@ -436,6 +436,7 @@ function renderSidebar() {
       <div class="sb-label">Mais</div>
       ${navBtn('crown', typeof cloudLinked === 'function' && cloudLinked() ? 'Assinatura' : premium() ? 'Premium' : 'Seja Premium', S.view === 'premium', "go('premium',{cur:null})", 'nav-prem')}
       ${navBtn('help', 'Ajuda e suporte', S.view === 'ajuda', "go('ajuda',{cur:null})")}
+      ${typeof acessoInfo === 'function' && cloudLinked() && acessoInfo().admin ? navBtn('report', 'Administrador', S.view === 'admin', "go('admin',{cur:null})") : ''}
     </div>
     <div class="sb-foot">
       <div class="sb-prof">${esc(DB.prof.nome || '')}${DB.prof.crp ? ' · CRP ' + esc(DB.prof.crp) : ''}</div>

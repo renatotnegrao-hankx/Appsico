@@ -508,7 +508,7 @@ function contaCard() {
     <p style="margin:0 0 10px">Ative sua conta para sincronizar os prontuários entre o celular e o computador. Tudo vai <b>criptografado</b>: ninguém além de você consegue ler.</p>
     <div class="row-actions" style="justify-content:flex-start"><button class="pri" onclick="cloudLigar()">Ativar conta na nuvem</button></div></div></details>`;
   const a = acessoInfo();
-  const st = a.desconhecido ? 'Verificando…' : a.teste ? `Teste grátis: ${a.dias} dia${a.dias === 1 ? '' : 's'} restante${a.dias === 1 ? '' : 's'}` : a.ativo ? `Assinatura ${nomePlanoN(a.plano)} · até ${fmtD(a.ate)}` : a.conferir ? 'Conecte à internet para conferir a assinatura' : 'Sem assinatura ativa · modo consulta';
+  const st = a.desconhecido ? 'Verificando…' : a.teste ? `Teste grátis: ${a.dias} dia${a.dias === 1 ? '' : 's'} restante${a.dias === 1 ? '' : 's'}` : a.ativo ? (vitalicio(a.ate) ? `Assinatura ${nomePlanoN(a.plano)} · vitalícia` : `Assinatura ${nomePlanoN(a.plano)} · até ${fmtD(a.ate)}`) : a.conferir ? 'Conecte à internet para conferir a assinatura' : 'Sem assinatura ativa · modo consulta';
   return `<details class="card acc" open><summary><span class="acc-ic">${IC.backup}</span><span class="acc-t"><b>Conta e nuvem</b><small>${esc(V.cloud.email)}</small></span></summary><div class="acc-body">
     <div class="conta-st ${a.ativo ? (a.teste ? 'teste' : 'ok') : 'fim'}"><b>${esc(st)}</b><span>${syncBadge()}</span></div>
     <div class="row-actions" style="justify-content:flex-start;flex-wrap:wrap">
@@ -529,7 +529,7 @@ const nomePlanoN = id => ({ mensal: 'mensal', anual: 'anual', anualpix: 'anual (
 /* ---------- tela de planos (nuvem) ---------- */
 function panePremiumNuvem(m) {
   const a = acessoInfo(), sel = S.planoSel || 'anual';
-  m.innerHTML = `<div class="head"><div><h1>Assinatura Appsico</h1><div class="meta">${a.teste ? `Teste grátis até ${fmtD(a.ate)} (${a.dias} dia${a.dias === 1 ? '' : 's'})` : a.ativo ? `Assinatura ${nomePlanoN(a.plano)} ativa até ${fmtD(a.ate)}` : a.conferir ? 'Conecte à internet para conferir sua assinatura' : 'Sem assinatura ativa: o app está em modo consulta'}</div></div>${sairBtn()}</div>
+  m.innerHTML = `<div class="head"><div><h1>Assinatura Appsico</h1><div class="meta">${a.teste ? `Teste grátis até ${fmtD(a.ate)} (${a.dias} dia${a.dias === 1 ? '' : 's'})` : a.ativo ? (vitalicio(a.ate) ? `Assinatura ${nomePlanoN(a.plano)} vitalícia` : `Assinatura ${nomePlanoN(a.plano)} ativa até ${fmtD(a.ate)}`) : a.conferir ? 'Conecte à internet para conferir sua assinatura' : 'Sem assinatura ativa: o app está em modo consulta'}</div></div>${sairBtn()}</div>
     <div class="prem-hero"><span class="ph-ic">${IC.crown}</span><div><b>${a.ativo && !a.teste ? 'Obrigado por assinar o Appsico!' : 'Continue com tudo o que você já usa'}</b>
       <small>Prontuários criptografados no celular e no computador, agenda, lembretes, documentos, financeiro e Pix. Cancele quando quiser.</small></div></div>
     ${!a.ativo ? (a.conferir ? `<div class="note warn">Faz mais de ${DIAS_OFFLINE} dias que o app não confere sua assinatura. Conecte o aparelho à internet e toque em "Já paguei — atualizar". Enquanto isso, você pode ver e exportar os prontuários.</div>` : `<div class="note warn">Sem assinatura ativa, o Appsico fica em <b>modo consulta</b>: você vê e exporta todos os prontuários (em PDF), mas não registra sessões, pacientes, agenda ou financeiro. Nenhum dado é apagado. Assine e tudo volta a funcionar na hora.</div>`) : ''}
@@ -551,29 +551,60 @@ function bannerNuvem() {
 }
 
 /* ---------- painel do administrador ---------- */
+const NOME_PLANO_ADM = { mensal: 'Mensal', anual: 'Anual', anualpix: 'Anual no Pix', cortesia: 'Cortesia' };
+const vitalicio = d => !!d && String(d).slice(0, 4) >= '9000';
 async function paneAdmin(m) {
-  m.innerHTML = `<div class="head"><div><h1>Painel do administrador</h1><div class="meta">Contas e assinaturas (sem acesso a prontuários)</div></div>${sairBtn()}</div><div class="card"><p class="meta">Carregando…</p></div>`;
+  if (!acessoInfo().admin) { S.view = 'inicio'; return render(); }
+  const cab = `<div class="head"><div><h1>Painel do administrador</h1><div class="meta">Só a sua conta de administrador vê esta tela. Prontuários nunca aparecem aqui: eles são criptografados.</div></div><div class="row-actions"><button onclick="paneAdmin($('main'))">${IC.sync || ''} Atualizar</button>${sairBtn()}</div></div>`;
+  if (!S._adm) m.innerHTML = cab + `<div class="card"><p class="meta">Carregando…</p></div>`;
   try {
     const [{ data: r, error: e1 }, { data: us, error: e2 }] = await Promise.all([sb.rpc('admin_resumo'), sb.rpc('admin_usuarios', { q: S.admQ || '' })]);
     if (e1 || e2) throw (e1 || e2);
+    S._adm = true;
     const brl2 = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const n = v => Number(v || 0).toLocaleString('pt-BR');
+    const pagantes = (+r.mensal || 0) + (+r.anual || 0) + (+r.anualpix || 0);
+    const conv = r.usuarios ? Math.round(pagantes / r.usuarios * 100) : 0;
+    const PP = r.por_plano || [], BM = r.por_mes || [], mx = Math.max(1, ...BM.map(x => +x.v || 0));
+    const MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
     const sit = u => { const ag = Date.now(); const pago = u.valido_ate && new Date(u.valido_ate) > ag, teste = new Date(u.teste_ate) > ag;
-      return pago ? `<span class="tag st-confirmado">${esc(u.plano || 'assinante')} até ${fmtD(u.valido_ate.slice(0, 10))}</span>` : teste ? `<span class="tag">teste até ${fmtD(u.teste_ate.slice(0, 10))}</span>` : '<span class="tag warn">expirado</span>'; };
-    m.innerHTML = `<div class="head"><div><h1>Painel do administrador</h1><div class="meta">Contas e assinaturas (sem acesso a prontuários)</div></div>${sairBtn()}</div>
-      <div class="kpis"><div class="kpi k-rec"><span>Receita recorrente/mês</span><b>${brl2(r.mrr)}</b></div><div class="kpi"><span>Receita do mês</span><b>${brl2(r.receita_mes)}</b></div><div class="kpi"><span>Receita total</span><b>${brl2(r.receita_total)}</b></div></div>
-      <div class="kpis"><div class="kpi"><span>Usuários</span><b>${r.usuarios}</b></div><div class="kpi"><span>Em teste</span><b>${r.em_teste}</b></div><div class="kpi"><span>Assinantes</span><b>${r.mensal + r.anual + r.anualpix}</b></div><div class="kpi k-pag"><span>Expirados</span><b>${r.expirados}</b></div></div>
-      <div class="card"><h3>Assinantes por plano</h3><p class="meta">Mensal: <b>${r.mensal}</b> · Anual: <b>${r.anual}</b> · Anual no Pix: <b>${r.anualpix}</b> · Cortesia: <b>${r.cortesia}</b> · Novos em 7 dias: <b>${r.novos_7d}</b> · Ativos na semana: <b>${r.ativos_7d}</b></p></div>
-      <div class="card"><h3>Usuários</h3><input id="admQ" placeholder="Buscar por nome ou e-mail" value="${esc(S.admQ || '')}" style="margin-bottom:10px">
-        <div class="adm-list">${(us || []).map(u => `<div class="adm-u"><div><b>${esc(u.nome || '—')}</b><small>${esc(u.email)}${u.crp ? ' · CRP ' + esc(u.crp) : ''} · desde ${fmtD(String(u.criado_em).slice(0, 10))}</small>${sit(u)}</div>
-          <select onchange="admLiberar('${u.id}', this.value);this.value=''"><option value="">Ações…</option><option value="teste15">+15 dias de teste</option><option value="30d">Cortesia 30 dias</option><option value="90d">Cortesia 90 dias</option><option value="1y">Cortesia 1 ano</option><option value="remover">Remover assinatura</option></select></div>`).join('') || '<p class="meta">Nenhum usuário.</p>'}</div></div>`;
+      if (pago) return `<span class="tag ${u.plano === 'cortesia' ? 'adm-gift' : 'st-confirmado'}">${esc(NOME_PLANO_ADM[u.plano] || 'Assinante')}${vitalicio(u.valido_ate) ? ' · vitalícia' : ' · até ' + fmtD(u.valido_ate.slice(0, 10))}</span>`;
+      return teste ? `<span class="tag">Teste até ${fmtD(u.teste_ate.slice(0, 10))}</span>` : '<span class="tag warn">Sem assinatura</span>'; };
+    m.innerHTML = cab + `
+      <div class="kpis adm-kpis">
+        <div class="kpi k-rec"><span>Receita recorrente/mês</span><b>${brl2(r.mrr)}</b><small class="meta">mensal + anual (÷12)</small></div>
+        <div class="kpi"><span>Receita do mês</span><b>${brl2(r.receita_mes)}</b><small class="meta">últimos 30 dias: ${brl2(r.receita_30d)}</small></div>
+        <div class="kpi"><span>Receita total</span><b>${brl2(r.receita_total)}</b><small class="meta">desde o início</small></div>
+        <div class="kpi"><span>Assinantes pagantes</span><b>${n(pagantes)}</b><small class="meta">${conv}% dos usuários</small></div>
+        <div class="kpi"><span>Usuários</span><b>${n(r.usuarios)}</b><small class="meta">+${n(r.novos_7d)} em 7 dias · +${n(r.novos_30d)} em 30</small></div>
+        <div class="kpi"><span>Em teste grátis</span><b>${n(r.em_teste)}</b><small class="meta">${n(r.ativos_7d)} usaram na semana</small></div>
+        <div class="kpi k-pag"><span>Sem assinatura</span><b>${n(r.expirados)}</b><small class="meta">teste acabou e não assinaram</small></div>
+        <div class="kpi"><span>Cortesias ativas</span><b>${n(r.cortesia)}</b><small class="meta">liberadas por você</small></div>
+      </div>
+      <div class="card"><h3>Assinaturas por tipo</h3>
+        <div class="tbl-wrap"><table class="adm-tbl"><thead><tr><th>Plano</th><th>Preço</th><th>Ativas</th><th>Receita no mês</th><th>Receita total</th><th>Recorrente/mês</th></tr></thead><tbody>
+        ${PP.map(x => `<tr><td><b>${esc(NOME_PLANO_ADM[x.plano] || x.plano)}</b></td><td>${x.plano === 'cortesia' ? 'grátis' : x.plano === 'mensal' ? 'R$ 24,90/mês' : 'R$ 199,00/ano'}</td><td>${n(x.ativos)}</td><td>${brl2(x.receita_mes)}</td><td>${brl2(x.receita_total)}</td><td>${brl2(x.mrr)}</td></tr>`).join('')}
+        <tr class="tot"><td><b>Total</b></td><td></td><td><b>${n(pagantes + (+r.cortesia || 0))}</b></td><td><b>${brl2(r.receita_mes)}</b></td><td><b>${brl2(r.receita_total)}</b></td><td><b>${brl2(r.mrr)}</b></td></tr>
+        </tbody></table></div></div>
+      <div class="card"><h3>Receita e novos usuários — últimos 6 meses</h3>
+        <div class="adm-bars">${BM.map(x => `<div class="ab"><em>${+x.v ? brl2(x.v).replace(',00', '') : ''}</em><div class="abb"><i style="height:${Math.max(2, (+x.v || 0) / mx * 100)}%"></i></div><small>${MES[+String(x.m).slice(5, 7) - 1]}</small><span>+${n(x.u)} usuários</span></div>`).join('')}</div></div>
+      ${(r.recentes || []).length ? `<div class="card"><h3>Últimos pagamentos</h3>${r.recentes.map(p => `<div class="adm-pg"><span><b>${esc(p.email || '—')}</b><small>${esc(NOME_PLANO_ADM[p.plano] || p.plano)} · ${fmtD(String(p.criado_em).slice(0, 10))}</small></span><b class="ok">${brl2(p.valor)}</b></div>`).join('')}</div>` : ''}
+      <div class="card"><h3>Usuários (${n((us || []).length)})</h3><input id="admQ" placeholder="Buscar por nome ou e-mail" value="${esc(S.admQ || '')}" style="margin-bottom:10px">
+        <div class="adm-list">${(us || []).map(u => `<div class="adm-u"><div><b>${esc(u.nome || '—')}</b><small>${esc(u.email)}${u.crp ? ' · CRP ' + esc(u.crp) : ''} · desde ${fmtD(String(u.criado_em).slice(0, 10))}${u.ultimo_uso ? ' · usou em ' + fmtD(String(u.ultimo_uso).slice(0, 10)) : ''}</small>${sit(u)}</div>
+          <select onchange="admLiberar('${u.id}', this.value, this);this.value=''"><option value="">Ações…</option><option value="teste15">+15 dias de teste</option><option value="30d">Cortesia 30 dias</option><option value="90d">Cortesia 90 dias</option><option value="1y">Cortesia 1 ano</option><option value="vitalicio">Cortesia vitalícia</option><option value="remover">Remover assinatura</option></select></div>`).join('') || '<p class="meta">Nenhum usuário.</p>'}</div>
+        <p class="meta" style="margin-top:10px">Cortesia libera o Appsico completo sem cobrança. Quem paga pelo Mercado Pago continua sendo cobrado lá: para parar a cobrança, cancele a assinatura no Mercado Pago.</p></div>`;
     $('admQ').onchange = e => { S.admQ = e.target.value; paneAdmin($('main')); };
-  } catch (e) { m.querySelector('.card').innerHTML = `<p class="err">${esc(errMsg(e))}</p>`; }
+  } catch (e) { const c = m.querySelector('.card'); if (c) c.innerHTML = `<p class="err">${esc(/acesso negado/i.test(String(e && e.message)) ? 'Acesso negado: esta conta não é de administrador.' : errMsg(e))}</p>`; }
 }
-async function admLiberar(id, modo) {
+const ADM_ACAO = { teste15: 'dar mais 15 dias de teste', '30d': 'dar cortesia de 30 dias', '90d': 'dar cortesia de 90 dias', '1y': 'dar cortesia de 1 ano', vitalicio: 'dar cortesia vitalícia', remover: 'remover a assinatura' };
+async function admLiberar(id, modo, sel) {
   if (!modo) return;
-  const { error } = await sb.rpc('admin_liberar', { alvo: id, modo });
-  if (error) return toast(errMsg(error));
-  toast('Atualizado'); paneAdmin($('main'));
+  const email = sel ? (sel.closest('.adm-u').querySelector('small').textContent.split(' · ')[0]) : '';
+  confirmBox('Confirmar', `Deseja ${ADM_ACAO[modo]} para ${email}?`, 'Confirmar', async () => {
+    const { error } = await sb.rpc('admin_liberar', { alvo: id, modo });
+    if (error) return toast(errMsg(error));
+    toast(modo === 'remover' ? 'Assinatura removida' : 'Cortesia concedida'); paneAdmin($('main'));
+  });
 }
 
 /* ---------- link de recuperação de senha aberto no navegador ---------- */
