@@ -162,6 +162,7 @@ begin
     'anual',        (select count(*) from a where plano = 'anual'),
     'anualpix',     (select count(*) from a where plano = 'anualpix'),
     'cortesia',     (select count(*) from a where plano = 'cortesia'),
+    'vitalicio',    (select count(*) from a where plano = 'vitalicio'),
     'mrr',          round((select count(*) from a where plano = 'mensal') * 24.90
                         + (select count(*) from a where plano in ('anual', 'anualpix')) * 199.00 / 12, 2),
     'receita_total',(select coalesce(sum(valor),0) from pagamentos where status = 'approved'),
@@ -173,7 +174,7 @@ begin
                        'receita_mes', (select coalesce(sum(valor),0) from pagamentos g where g.status = 'approved' and g.plano = pl.plano and g.criado_em >= date_trunc('month', now())),
                        'receita_total', (select coalesce(sum(valor),0) from pagamentos g where g.status = 'approved' and g.plano = pl.plano),
                        'mrr', round((select count(*) from a where a.plano = pl.plano) * pl.mensal, 2)) order by pl.ord)
-                     from (values (1,'mensal',24.90::numeric),(2,'anual',199.00/12),(3,'anualpix',199.00/12),(4,'cortesia',0::numeric)) pl(ord, plano, mensal)),
+                     from (values (1,'mensal',24.90::numeric),(2,'anual',199.00/12),(3,'anualpix',199.00/12),(4,'vitalicio',0::numeric),(5,'cortesia',0::numeric)) pl(ord, plano, mensal)),
     'por_mes',      (select json_agg(json_build_object(
                        'm', to_char(mm, 'YYYY-MM'),
                        'v', (select coalesce(sum(valor),0) from pagamentos g where g.status = 'approved' and date_trunc('month', g.criado_em) = mm),
@@ -220,6 +221,21 @@ begin
     where id = alvo;
   end if;
 end $$;
+
+-- Assinatura vitalícia (paga por fora, ex.: Pix direto): registra o valor recebido na receita
+create or replace function public.admin_vitalicio(alvo uuid, valor numeric default 0)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_admin() then raise exception 'acesso negado'; end if;
+  update perfis set valido_ate = '9999-12-31'::timestamptz, plano = 'vitalicio', provedor = 'admin', provedor_ref = 'vitalicio'
+   where id = alvo;
+  if coalesce(valor, 0) > 0 then
+    insert into pagamentos (user_id, email, provedor, plano, valor, status, externo_id)
+    values (alvo, (select email from perfis where id = alvo), 'manual', 'vitalicio', valor, 'approved', 'manual:' || gen_random_uuid());
+  end if;
+end $$;
+revoke all on function public.admin_vitalicio(uuid, numeric) from public, anon;
+grant execute on function public.admin_vitalicio(uuid, numeric) to authenticated;
 
 revoke all on function public.meu_acesso(), public.criar_cofre(jsonb, jsonb, text), public.salvar_cofre(jsonb, bigint, text),
   public.trocar_chaves(jsonb), public.excluir_minha_conta(), public.is_admin(), public.admin_resumo(),
