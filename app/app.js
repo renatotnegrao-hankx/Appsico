@@ -2611,7 +2611,8 @@ async function boot() {
   if (!window.crypto || !crypto.subtle) ok = false;
   try { await loadVault(); } catch (e) { V = null; }
   await new Promise(r => setTimeout(r, Math.max(0, 1900 - (Date.now() - t0))));
-  if (!ok) authScreen('<h2>Ambiente sem criptografia</h2><div class="sub">Este navegador não oferece criptografia segura. Abra o Appsico pelo app Android.</div>');
+  if (!ok && location.protocol === 'http:' && !/^(localhost|127\.)/.test(location.hostname)) { const seg = 'https://' + location.host + location.pathname; authScreen(`<h2>Abra pelo endereço seguro</h2><div class="sub">Você abriu o Appsico sem o cadeado (http). Para proteger os prontuários, ele só funciona no endereço seguro (https).</div><a class="btn pri big" style="display:block;text-align:center;margin-top:14px" href="${seg}">Abrir ${esc(seg.replace('https://', ''))} com segurança</a>`); }
+  else if (!ok) authScreen('<h2>Ambiente sem criptografia</h2><div class="sub">Este navegador não oferece criptografia segura. Abra o Appsico pelo app Android.</div>');
   else if (typeof CLOUD !== 'undefined' && CLOUD && (window._recuperarSenha || /type=recovery/.test(location.hash))) showNovaSenhaConta();
   else if (!V) (typeof CLOUD !== 'undefined' && CLOUD ? showCloudStart(/pago=1/.test(location.search) ? 'entrar' : 'criar') : showSetup()); else showLogin();
   window._bootOk = true;
