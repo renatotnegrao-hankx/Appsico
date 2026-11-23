@@ -15,8 +15,8 @@ window.APPSICO_CONFIG = {
   // Preencha com os dados do seu projeto (Project Settings → API). Enquanto estiver vazio,
   // o app funciona como antes, com os dados só no aparelho.
   supabase: {
-    url: "",          // ex.: "https://abcdefghijkl.supabase.co"
-    anonKey: "",      // a chave "anon public" / "publishable" (pode ficar no app, é pública)
+    url: "https://nbyktcpvhlolunkzjbvf.supabase.co",
+    anonKey: "sb_publishable_wvIsl-i4-74JKGH7GnzCMg_kkcj2zL8",      // a chave "anon public" / "publishable" (pode ficar no app, é pública)
     appUrl: "https://www.appsico.com.br/app/",       // endereço da versão web, ex.: "https://www.appsico.com.br/app/"
     siteUrl: "https://www.appsico.com.br"       // endereço do site, ex.: "https://www.appsico.com.br"
   },
@@ -31,7 +31,7 @@ window.APPSICO_CONFIG = {
     clientSecret: ""
   },
   // Versão mostrada em Ajuda e suporte
-  versao: "4.3",
+  versao: "4.4",
   // Contato do suporte (aparece em Ajuda e suporte). Ex.: whatsapp: "11999998888", email: "suporte@appsico.com.br"
   suporte: {
     whatsapp: "",
