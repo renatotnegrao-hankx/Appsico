@@ -825,3 +825,5 @@ body.mini .sync-st span{display:none}
 .sa-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.sa-head h2{margin:0;font-size:18px}
 .sa-list .entry p{white-space:pre-wrap}
 body.t-escuro .evc-ult{background:rgba(255,255,255,.04)}
+
+.ios-passos{margin:6px 0 10px;padding-left:20px}.ios-passos li{margin:4px 0}

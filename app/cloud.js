@@ -236,7 +236,24 @@ async function conferirPagamento() {
   try { await refreshAcesso(); const a = acessoInfo(); render(); toast(a.ativo && !a.teste ? 'Assinatura ativa. Obrigado!' : 'Pagamento ainda não confirmado. Tente de novo em alguns minutos.'); if (a.ativo) syncNow(); }
   catch (e) { toast(errMsg(e)); }
 }
-async function baixarApk() {
+// O APK só instala em Android. No iPhone/iPad o Appsico é usado pelo Safari (adicionado à Tela de Início).
+const ehIOS = () => /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const ehAndroid = () => /Android/i.test(navigator.userAgent);
+function botaoApp() { return NATIVE ? '' : ehIOS() ? '<button onclick="instrucoesIOS()">Usar no iPhone</button>' : '<button onclick="baixarApk()">Baixar app Android</button>'; }
+function instrucoesIOS() {
+  modal(`<h2>Appsico no iPhone e iPad</h2>
+    <p>O app para instalar (APK) é exclusivo para Android. No iPhone e no iPad você usa o Appsico pelo <b>Safari</b>, com os mesmos prontuários, sincronizados e criptografados.</p>
+    <p><b>Para deixar o ícone na tela do iPhone:</b></p>
+    <ol class="ios-passos"><li>Abra <b>www.appsico.com.br/app</b> no <b>Safari</b>.</li><li>Toque no botão <b>Compartilhar</b> (quadrado com seta para cima).</li><li>Escolha <b>Adicionar à Tela de Início</b> e toque em <b>Adicionar</b>.</li></ol>
+    <p class="meta">Depois é só abrir pelo ícone do Appsico, como um app.</p>
+    <div class="row-actions"><button class="pri" onclick="closeModal()">Entendi</button></div>`);
+}
+async function baixarApk(confirmado) {
+  if (ehIOS()) return instrucoesIOS();
+  if (!ehAndroid() && !confirmado) return modal(`<h2>App Android</h2>
+    <p>O arquivo do app (APK) só instala em <b>celulares e tablets Android</b>. Neste computador você já usa o Appsico direto pelo navegador.</p>
+    <p>O jeito mais fácil: no seu celular Android, abra <b>www.appsico.com.br/app</b>, entre na sua conta e toque em <b>Baixar app Android</b> (em Configurações → Conta e nuvem).</p>
+    <div class="row-actions"><button onclick="closeModal()">Fechar</button><button class="pri" onclick="closeModal();baixarApk(true)">Baixar o arquivo mesmo assim</button></div>`);
   try {
     const { data, error } = await sb.functions.invoke('apk-link', { body: {} });
     if (error) { let m = error.message; try { m = (await error.context.json()).error || m; } catch (e) {} throw new Error(m); }
@@ -528,7 +545,7 @@ function contaCard() {
     <div class="row-actions" style="justify-content:flex-start;flex-wrap:wrap">
       <button class="pri" onclick="go('premium',{cur:null})">${a.ativo && !a.teste ? 'Minha assinatura' : 'Assinar'}</button>
       <button onclick="syncNow(true)">Sincronizar agora</button>
-      ${!NATIVE ? '<button onclick="baixarApk()">Baixar app Android</button>' : ''}
+      ${botaoApp()}
       <button onclick="cloudTrocarSenha()">Trocar senha da conta</button>
       ${a.admin ? `<button onclick="go('admin',{cur:null})">Painel do administrador</button>` : ''}
     </div>
@@ -550,7 +567,7 @@ function panePremiumNuvem(m) {
     <div class="planos">${PLANOS_NUVEM.map(x => `<button class="plano ${sel === x.id ? 'on' : ''}" onclick="S.planoSel='${x.id}';panePremiumNuvem($('main'))">
       ${x.tag ? `<span class="pl-tag">${x.tag}</span>` : ''}<span class="pl-radio"></span><b>${x.nome}</b><span class="pl-preco">${x.preco}</span><small>${x.per}</small><small class="pl-obs">${x.obs}</small></button>`).join('')}</div>
     <div class="row-actions prem-act"><button class="pri big" onclick="cloudAssinar('${sel}')">${IC.crown} ${sel === 'anualpix' ? 'Pagar' : 'Assinar'} ${PLANOS_NUVEM.find(x => x.id === sel).nome} · ${PLANOS_NUVEM.find(x => x.id === sel).preco}</button></div>
-    <div class="row-actions prem-act"><button onclick="conferirPagamento()">Já paguei — atualizar</button>${!NATIVE ? '<button onclick="baixarApk()">Baixar app Android</button>' : ''}</div>
+    <div class="row-actions prem-act"><button onclick="conferirPagamento()">Já paguei — atualizar</button>${botaoApp()}</div>
     <p class="meta" style="text-align:center;margin-top:10px">Pagamento pelo Mercado Pago. Mensal e Anual renovam sozinhos no cartão e podem ser cancelados a qualquer momento na sua conta do Mercado Pago. O Anual no Pix é pago uma vez e vale 1 ano.</p>`;
 }
 function bannerNuvem() {
