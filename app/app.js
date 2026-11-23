@@ -124,9 +124,9 @@ async function setNewPassword(pw) {
   await Secure.set('dek', b64e(DEKraw));
   await persist();
 }
-function lockApp(reason) {
+function lockApp(reason, depois) {
   clearTimeout(saveTimer);
-  const go = () => { DEK = null; DEKraw = null; DB = null; S.cur = null; S.view = 'home'; closeModal(); cleanTemp(); showLogin(reason); };
+  const go = () => { DEK = null; DEKraw = null; DB = null; S.cur = null; S.view = 'home'; closeModal(); cleanTemp(); if (depois) depois(); else showLogin(reason); };
   const nuvem = () => (typeof cloudBeforeLock === 'function' ? cloudBeforeLock() : null);
   if (DEK) saving.then(persist).catch(() => {}).then(nuvem).catch(() => {}).then(() => { if (typeof cloudStop === 'function') cloudStop(); }).then(go); else go();
 }
@@ -470,8 +470,11 @@ function renderMain() {
 }
 
 /* ---------- Botão Sair ---------- */
+// Sair: no navegador volta para o site; no app Android volta para a tela de entrada
+const siteInicio = () => ((typeof SUPA !== 'undefined' && SUPA.siteUrl) || 'https://www.appsico.com.br').replace(/\/$/, '') + '/';
+function sairDoApp() { lockApp('Você saiu do Appsico', NATIVE ? null : () => { location.href = siteInicio(); }); }
 const sairBtn = (home) => home === true
-  ? `<button class="sair" onclick="confirmBox('Sair do Appsico?','Os prontuários serão bloqueados e será preciso entrar com e-mail e PIN.','Sair',()=>lockApp('Você saiu do Appsico'))">${IC.exit}<span>Sair</span></button>`
+  ? `<button class="sair" onclick="confirmBox('Sair do Appsico?','Os prontuários serão bloqueados e será preciso entrar com e-mail e PIN.','Sair',()=>sairDoApp())">${IC.exit}<span>Sair</span></button>`
   : `<button class="sair" onclick="go('${home === 'lista' ? 'home' : 'inicio'}',{cur:null})">${IC.exit}<span>Sair</span></button>`;
 
 /* ---------- Foto do paciente ---------- */
@@ -2614,7 +2617,9 @@ async function boot() {
   if (!ok && location.protocol === 'http:' && !/^(localhost|127\.)/.test(location.hostname)) { const seg = 'https://' + location.host + location.pathname; authScreen(`<h2>Abra pelo endereço seguro</h2><div class="sub">Você abriu o Appsico sem o cadeado (http). Para proteger os prontuários, ele só funciona no endereço seguro (https).</div><a class="btn pri big" style="display:block;text-align:center;margin-top:14px" href="${seg}">Abrir ${esc(seg.replace('https://', ''))} com segurança</a>`); }
   else if (!ok) authScreen('<h2>Ambiente sem criptografia</h2><div class="sub">Este navegador não oferece criptografia segura. Abra o Appsico pelo app Android.</div>');
   else if (typeof CLOUD !== 'undefined' && CLOUD && (window._recuperarSenha || /type=recovery/.test(location.hash))) showNovaSenhaConta();
-  else if (!V) (typeof CLOUD !== 'undefined' && CLOUD ? showCloudStart(/pago=1/.test(location.search) ? 'entrar' : 'criar') : showSetup()); else showLogin();
+  else if (!V) (typeof CLOUD !== 'undefined' && CLOUD ? showCloudStart(/pago=1|entrar=1/.test(location.search) ? 'entrar' : 'criar') : showSetup());
+  else if (/criar=1/.test(location.search) && V.cloud && typeof showCriarOutraConta === 'function') showCriarOutraConta();
+  else showLogin();
   window._bootOk = true;
   $('splash').classList.add('out');
   setTimeout(() => $('splash').remove(), 1000);

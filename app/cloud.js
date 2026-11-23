@@ -486,7 +486,21 @@ async function limparAparelho() {
   try { await sb.auth.signOut(); } catch (e) {}
   await Store.clear();
   try { localStorage.removeItem('ks_dek'); } catch (e) {}
-  location.reload();
+  if (!NATIVE) location.href = siteInicio(); else location.reload();
+}
+// Aberto pelo botão "Testar grátis" num navegador que já tem outra conta conectada
+function showCriarOutraConta() {
+  authScreen(`<h2>Teste grátis por 15 dias</h2>
+    <div class="sub">Este navegador já está conectado à conta <b>${esc(V.cloud.email || '')}</b>.</div>
+    <div class="note">Para criar uma conta nova aqui, desconecte a conta atual deste navegador. Os prontuários dela continuam guardados na nuvem e voltam quando ela entrar de novo.</div>
+    <button class="pri" id="coNova">Desconectar e criar nova conta</button>
+    <div class="links"><a id="coEntrar">Não, quero entrar como ${esc(V.cloud.email || 'essa conta')}</a></div>`);
+  $('coEntrar').onclick = () => { history.replaceState(null, '', location.pathname); showLogin(); };
+  $('coNova').onclick = () => confirmBox('Desconectar este navegador?', `A conta ${V.cloud.email || ''} sai deste navegador. Os prontuários dela continuam na nuvem. Se ela fez alterações sem internet que ainda não foram enviadas, cancele e entre primeiro para sincronizar.`, 'Desconectar', async () => {
+    cloudStop(); try { await sb.auth.signOut(); } catch (e) {}
+    await Store.clear(); try { localStorage.removeItem('ks_dek'); } catch (e) {}
+    location.href = location.pathname + '?criar=1';
+  });
 }
 function cloudSair() {
   confirmTyped('Sair da conta neste aparelho', 'Os prontuários continuam guardados na sua conta, mas a cópia deste aparelho será apagada. Para voltar, entre com e-mail e senha.', 'SAIR', async () => {
