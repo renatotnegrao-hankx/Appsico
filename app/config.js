@@ -31,7 +31,7 @@ window.APPSICO_CONFIG = {
     clientSecret: ""
   },
   // Versão mostrada em Ajuda e suporte
-  versao: "4.8",
+  versao: "4.9",
   // Contato do suporte (aparece em Ajuda e suporte). Ex.: whatsapp: "11999998888", email: "suporte@appsico.com.br"
   suporte: {
     whatsapp: "",

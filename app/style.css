@@ -814,3 +814,14 @@ body.mini .sync-st span{display:none}
 .adm-bars .abb i{display:block;width:100%;background:var(--grad);border-radius:8px}.adm-bars small{font-weight:600}.adm-bars span{color:var(--muted);font-size:11px;text-align:center}
 .adm-pg{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}.adm-pg:last-child{border-bottom:none}.adm-pg small{display:block;color:var(--muted);font-size:12px}.adm-pg .ok{color:var(--ok)}
 .tag.adm-gift{background:#f1e8ff;color:#7c3aed}
+
+/* consulta ao prontuário durante a sessão */
+.evo-consulta{border-left:4px solid var(--acc,#14bfa5)}
+.evc-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.evc-head h3{display:flex;align-items:center;gap:8px;margin:0}.evc-head h3 svg{width:18px;height:18px}
+.evc-acts{display:flex;gap:8px;flex-wrap:wrap}.evc-acts button{display:inline-flex;align-items:center;gap:6px}.evc-acts svg{width:16px;height:16px}
+.evc-ult{margin-top:10px;background:#f6f9fc;border:1px solid var(--line);border-radius:10px;padding:10px 12px}.evc-ult small{color:var(--muted);font-weight:600;font-size:12px}
+.evc-txt{margin:6px 0 0;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}.evc-txt.aberto{display:block;-webkit-line-clamp:unset}
+.evc-mais{margin:6px 0 0;font-size:13px}.evc-ver{display:inline-block;margin-top:6px;font-size:13px;font-weight:600}
+.sa-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.sa-head h2{margin:0;font-size:18px}
+.sa-list .entry p{white-space:pre-wrap}
+body.t-escuro .evc-ult{background:rgba(255,255,255,.04)}

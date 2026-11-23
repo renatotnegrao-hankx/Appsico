@@ -1226,7 +1226,16 @@ function lintEvo(t) {
 }
 function paneEvo(p) {
   const pf = S.prefill && S.prefill.pid === p.id ? S.prefill : null;
-  pane(`${pf ? `<div class="note">Registrando a consulta agendada para <b>${fmtD(pf.data)} às ${pf.hora}</b>. <a href="#" onclick="S.prefill=null;renderMain();return false">Cancelar</a></div>` : ''}<div class="card"><h3>Novo registro de sessão</h3>
+  const ult = p.evolucao.length ? p.evolucao[p.evolucao.length - 1] : null;
+  const consulta = ult ? `<div class="card evo-consulta"><div class="evc-head"><h3>${IC.book} Consultar o prontuário</h3>
+      <div class="evc-acts"><button onclick="showSessoesAnteriores()">${IC.trend}<span>Sessões anteriores (${p.evolucao.length})</span></button><button onclick="showRecord()">${IC.book}<span>Prontuário completo</span></button></div></div>
+      <div class="evc-ult"><small>Última sessão · ${fmtD(ult.data)}${ult.hora ? ' · ' + esc(ult.hora) : ''} · Sessão ${esc(ult.num)} · ${esc(ult.tipo)}</small>
+        <p class="evc-txt" id="evcTxt">${esc(ult.texto)}</p>
+        ${ult.intervencoes ? `<p class="evc-mais"><b>Intervenções:</b> ${esc(ult.intervencoes)}</p>` : ''}
+        ${(ult.retificacoes || []).map(r => `<div class="addendum"><b>Retificação</b> em ${fmtDT(r.em)}: ${esc(r.texto)}</div>`).join('')}
+        ${String(ult.texto || '').length > 260 ? `<a href="#" class="evc-ver" onclick="document.getElementById('evcTxt').classList.toggle('aberto');this.textContent=document.getElementById('evcTxt').classList.contains('aberto')?'Mostrar menos':'Ler sessão completa';return false">Ler sessão completa</a>` : ''}</div>
+      <p class="meta" style="margin:8px 0 0">Abrir as sessões anteriores ou o prontuário completo não apaga o que você já escreveu no novo registro.</p></div>` : '';
+  pane(`${pf ? `<div class="note">Registrando a consulta agendada para <b>${fmtD(pf.data)} às ${pf.hora}</b>. <a href="#" onclick="S.prefill=null;renderMain();return false">Cancelar</a></div>` : ''}${consulta}<div class="card"><h3>Novo registro de sessão</h3>
     <div class="note">Registre de forma <b>sintética e técnica</b>: progresso, eventos marcantes, intercorrências e respostas às intervenções. Não transcreva falas na íntegra nem inclua impressões íntimas ou hipóteses prematuras — use as <i>Anotações privadas</i>.</div>
     <div class="grid">
       <div class="c3"><label>Data</label><input type="date" id="eDt" value="${pf ? pf.data : today()}"></div>
@@ -1235,9 +1244,9 @@ function paneEvo(p) {
       <div class="c3"><label>Sessão nº</label><input type="number" id="eN" value="${p.evolucao.length + 1}"></div>
       <div class="c4"><label>Tipo</label><select id="eTp" onchange="if(/Falta justificada/.test(this.value))$('eVal').value='0,00'">${['Sessão individual', 'Sessão com responsável', 'Sessão familiar', 'Avaliação', 'Devolutiva', 'Falta justificada', 'Falta não justificada', 'Contato extra'].map(o => `<option>${o}</option>`).join('')}</select></div>
       <div class="c3"><label>Modalidade</label><select id="eMd">${['Presencial', 'On-line'].map(o => `<option ${p.demanda.modalidade === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div>
-      <div class="c12"><label>Registro técnico da sessão</label><textarea id="eTx" style="min-height:120px" oninput="liveLint()"></textarea><div class="counter" id="eCnt">0 caracteres</div><div class="lint" id="eLint"></div></div>
-      <div class="c6"><label>Intervenções / técnicas utilizadas</label><textarea id="eIv" style="min-height:60px"></textarea></div>
-      <div class="c6"><label>Intercorrências (se houver)</label><textarea id="eIc" style="min-height:60px"></textarea></div>
+      <div class="c12"><label>Registro técnico da sessão</label><textarea id="eTx" style="min-height:120px" oninput="liveLint();guardaRascunhoEvo()"></textarea><div class="counter" id="eCnt">0 caracteres</div><div class="lint" id="eLint"></div></div>
+      <div class="c6"><label>Intervenções / técnicas utilizadas</label><textarea id="eIv" style="min-height:60px" oninput="guardaRascunhoEvo()"></textarea></div>
+      <div class="c6"><label>Intercorrências (se houver)</label><textarea id="eIc" style="min-height:60px" oninput="guardaRascunhoEvo()"></textarea></div>
       <div class="c3"><label>Valor da consulta (R$)</label><input id="eVal" inputmode="decimal" value="${esc(p.ident.valorSessao || '')}" placeholder="0,00"></div>
       <div class="c3"><label>Pagamento</label><select id="ePg"><option value="0">Pendente</option><option value="1">Pago</option></select></div>
       <div class="c3"><label>Forma</label><select id="eFm">${FORMAS.map(o => `<option>${o}</option>`).join('')}</select></div></div>
@@ -1253,6 +1262,25 @@ function paneEvo(p) {
       ${(e.retificacoes || []).map(r => `<div class="addendum"><b>Retificação</b> em ${fmtDT(r.em)}: ${esc(r.texto)}</div>`).join('')}
       <div class="ent-foot">${e.valor !== undefined ? `<span class="tag ${e.pago ? 'ok' : 'warn'}">${brl(e.valor || 0)} · ${e.pago ? 'pago' + (e.forma ? ' (' + esc(e.forma) + ')' : '') : 'pendente'}</span>${e.pago ? '' : `<button class="ghost sm" onclick="marcarPago('${p.id}','${e.id}');renderMain()">marcar como pago</button>${e.valor > 0 ? `<button class="pix-btn sm" onclick="cobrarSessao('${p.id}','${e.id}')">${PIX_ICON}Cobrar via Pix</button>` : ''}`}` : ''}
         <span style="flex:1"></span><button class="ghost sm" onclick="addRetif('${e.id}')">+ retificação</button></div></div>`).join('') : '<div style="color:var(--muted);font-size:13px">Nenhuma sessão registrada.</div>'}</div>`);
+  restauraRascunhoEvo(p);
+}
+// rascunho do novo registro: fica só na memória enquanto o app está aberto (não vai para o disco nem para a nuvem)
+const EVO_CAMPOS = ['eTx', 'eIv', 'eIc'];
+function guardaRascunhoEvo() { const p = P(); if (!p || !$('eTx')) return; S.evoDraft = { pid: p.id, v: EVO_CAMPOS.map(id => $(id) ? $(id).value : '') }; }
+function restauraRascunhoEvo(p) { const d = S.evoDraft; if (!d || d.pid !== p.id) return; EVO_CAMPOS.forEach((id, i) => { if ($(id) && d.v[i]) $(id).value = d.v[i]; }); if ($('eTx')) liveLint(); }
+function showSessoesAnteriores(q) {
+  const p = P(); if (!p) return; guardaRascunhoEvo();
+  const termo = String(q || '').trim().toLowerCase();
+  const lst = [...p.evolucao].reverse().filter(e => !termo || [e.texto, e.intervencoes, e.intercorrencias, e.tipo, fmtD(e.data), ...(e.retificacoes || []).map(r => r.texto)].join(' ').toLowerCase().includes(termo));
+  modal(`<div class="sa-head"><h2>Sessões anteriores — ${esc(p.ident.nome || '')}</h2><button onclick="closeModal()">Fechar</button></div>
+    <input id="saQ" placeholder="Buscar nas sessões (palavra, data, técnica…)" value="${esc(q || '')}" style="margin:6px 0 12px">
+    <div class="sa-list">${lst.map(e => `<div class="entry">
+      <div class="top"><span><b>${fmtD(e.data)}${e.hora ? ' · ' + esc(e.hora) + (e.horaFim ? '–' + esc(e.horaFim) : '') : ''}</b> · Sessão ${esc(e.num)} · ${esc(e.tipo)} · ${esc(e.modalidade)}</span></div>
+      <p>${esc(e.texto)}</p>
+      ${e.intervencoes ? `<p><b style="font-size:12.5px;color:var(--muted)">Intervenções:</b> ${esc(e.intervencoes)}</p>` : ''}
+      ${e.intercorrencias ? `<p><b style="font-size:12.5px;color:var(--warn)">Intercorrências:</b> ${esc(e.intercorrencias)}</p>` : ''}
+      ${(e.retificacoes || []).map(r => `<div class="addendum"><b>Retificação</b> em ${fmtDT(r.em)}: ${esc(r.texto)}</div>`).join('')}</div>`).join('') || '<p class="meta">Nenhuma sessão encontrada.</p>'}</div>`, 'sheet');
+  const i = $('saQ'); i.oninput = () => { clearTimeout(i._t); i._t = setTimeout(() => { const v = i.value, pos = i.selectionStart; showSessoesAnteriores(v); const n = $('saQ'); n.focus(); n.setSelectionRange(pos, pos); }, 250); };
 }
 function liveLint() { const t = $('eTx').value; $('eCnt').textContent = t.length + ' caracteres'; $('eLint').innerHTML = lintEvo(t).map(w => '⚠ ' + w).join('<br>'); }
 function addEvo() {
@@ -1261,7 +1289,7 @@ function addEvo() {
     if (S.prefill && S.prefill.pid === p.id) { const ag = agList().find(x => x.id === S.prefill.agId); if (ag) ag.status = 'realizado'; S.prefill = null; }
     p.evolucao.push({ id: uid(), data: val('eDt'), hora: val('eHi'), horaFim: val('eHf'), num: val('eN'), tipo: val('eTp'), modalidade: val('eMd'), texto: t, intervencoes: val('eIv'), intercorrencias: val('eIc'), criadoEm: nowISO(), retificacoes: [],
       valor: parseValor(val('eVal')), pago, forma: val('eFm'), pagoEm: pago ? today() : '' });
-    p.evolucao.sort((a, b) => (a.data + (a.hora || '')).localeCompare(b.data + (b.hora || ''))); save(); toast('Sessão registrada'); render(); };
+    p.evolucao.sort((a, b) => (a.data + (a.hora || '')).localeCompare(b.data + (b.hora || ''))); S.evoDraft = null; save(); toast('Sessão registrada'); render(); };
   const w = lintEvo(t); if (w.length) confirmBox('Revisar antes de salvar?', w.join(' '), 'Salvar mesmo assim', doIt); else doIt();
 }
 function addRetif(id, col) {
