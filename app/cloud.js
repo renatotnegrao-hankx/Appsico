@@ -563,7 +563,7 @@ async function paneAdmin(m) {
     S._adm = true;
     const brl2 = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const n = v => Number(v || 0).toLocaleString('pt-BR');
-    const pagantes = (+r.mensal || 0) + (+r.anual || 0) + (+r.anualpix || 0) + (+r.vitalicio || 0);
+    const pagantes = (+r.mensal || 0) + (+r.anual || 0) + (+r.anualpix || 0);
     const conv = r.usuarios ? Math.round(pagantes / r.usuarios * 100) : 0;
     const PP = r.por_plano || [], BM = r.por_mes || [], mx = Math.max(1, ...BM.map(x => +x.v || 0));
     const MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
@@ -583,7 +583,7 @@ async function paneAdmin(m) {
       </div>
       <div class="card"><h3>Assinaturas por tipo</h3>
         <div class="tbl-wrap"><table class="adm-tbl"><thead><tr><th>Plano</th><th>Preço</th><th>Ativas</th><th>Receita no mês</th><th>Receita total</th><th>Recorrente/mês</th></tr></thead><tbody>
-        ${PP.map(x => `<tr><td><b>${esc(NOME_PLANO_ADM[x.plano] || x.plano)}</b></td><td>${x.plano === 'cortesia' ? 'grátis' : x.plano === 'vitalicio' ? 'pago uma vez' : x.plano === 'mensal' ? 'R$ 24,90/mês' : 'R$ 199,00/ano'}</td><td>${n(x.ativos)}</td><td>${brl2(x.receita_mes)}</td><td>${brl2(x.receita_total)}</td><td>${brl2(x.mrr)}</td></tr>`).join('')}
+        ${PP.map(x => `<tr><td><b>${esc(NOME_PLANO_ADM[x.plano] || x.plano)}</b></td><td>${x.plano === 'cortesia' ? 'grátis' : x.plano === 'mensal' ? 'R$ 24,90/mês' : 'R$ 199,00/ano'}</td><td>${n(x.ativos)}</td><td>${brl2(x.receita_mes)}</td><td>${brl2(x.receita_total)}</td><td>${brl2(x.mrr)}</td></tr>`).join('')}
         <tr class="tot"><td><b>Total</b></td><td></td><td><b>${n(pagantes + (+r.cortesia || 0))}</b></td><td><b>${brl2(r.receita_mes)}</b></td><td><b>${brl2(r.receita_total)}</b></td><td><b>${brl2(r.mrr)}</b></td></tr>
         </tbody></table></div></div>
       <div class="card"><h3>Receita e novos usuários — últimos 6 meses</h3>
@@ -591,29 +591,15 @@ async function paneAdmin(m) {
       ${(r.recentes || []).length ? `<div class="card"><h3>Últimos pagamentos</h3>${r.recentes.map(p => `<div class="adm-pg"><span><b>${esc(p.email || '—')}</b><small>${esc(NOME_PLANO_ADM[p.plano] || p.plano)} · ${fmtD(String(p.criado_em).slice(0, 10))}</small></span><b class="ok">${brl2(p.valor)}</b></div>`).join('')}</div>` : ''}
       <div class="card"><h3>Usuários (${n((us || []).length)})</h3><input id="admQ" placeholder="Buscar por nome ou e-mail" value="${esc(S.admQ || '')}" style="margin-bottom:10px">
         <div class="adm-list">${(us || []).map(u => `<div class="adm-u"><div><b>${esc(u.nome || '—')}</b><small>${esc(u.email)}${u.crp ? ' · CRP ' + esc(u.crp) : ''} · desde ${fmtD(String(u.criado_em).slice(0, 10))}${u.ultimo_uso ? ' · usou em ' + fmtD(String(u.ultimo_uso).slice(0, 10)) : ''}</small>${sit(u)}</div>
-          <select onchange="admLiberar('${u.id}', this.value, this);this.value=''"><option value="">Ações…</option><option value="teste15">+15 dias de teste</option><option value="30d">Cortesia 30 dias</option><option value="90d">Cortesia 90 dias</option><option value="1y">Cortesia 1 ano</option><option value="vitalicio">Cortesia vitalícia</option><option value="assinvit">Assinatura vitalícia (paga)</option><option value="remover">Remover assinatura</option></select></div>`).join('') || '<p class="meta">Nenhum usuário.</p>'}</div>
+          <select onchange="admLiberar('${u.id}', this.value, this);this.value=''"><option value="">Ações…</option><option value="teste15">+15 dias de teste</option><option value="30d">Cortesia 30 dias</option><option value="60d">Cortesia 60 dias</option><option value="90d">Cortesia 90 dias</option><option value="1y">Cortesia 1 ano</option><option value="vitalicio">Cortesia vitalícia</option><option value="remover">Remover assinatura</option></select></div>`).join('') || '<p class="meta">Nenhum usuário.</p>'}</div>
         <p class="meta" style="margin-top:10px">Cortesia libera o Appsico completo sem cobrança. Quem paga pelo Mercado Pago continua sendo cobrado lá: para parar a cobrança, cancele a assinatura no Mercado Pago.</p></div>`;
     $('admQ').onchange = e => { S.admQ = e.target.value; paneAdmin($('main')); };
   } catch (e) { const c = m.querySelector('.card'); if (c) c.innerHTML = `<p class="err">${esc(/acesso negado/i.test(String(e && e.message)) ? 'Acesso negado: esta conta não é de administrador.' : errMsg(e))}</p>`; }
 }
-const ADM_ACAO = { teste15: 'dar mais 15 dias de teste', '30d': 'dar cortesia de 30 dias', '90d': 'dar cortesia de 90 dias', '1y': 'dar cortesia de 1 ano', vitalicio: 'dar cortesia vitalícia', remover: 'remover a assinatura' };
+const ADM_ACAO = { teste15: 'dar mais 15 dias de teste', '30d': 'dar cortesia de 30 dias', '60d': 'dar cortesia de 60 dias', '90d': 'dar cortesia de 90 dias', '1y': 'dar cortesia de 1 ano', vitalicio: 'dar cortesia vitalícia', remover: 'remover a assinatura' };
 async function admLiberar(id, modo, sel) {
   if (!modo) return;
   const email = sel ? (sel.closest('.adm-u').querySelector('small').textContent.split(' · ')[0]) : '';
-  if (modo === 'assinvit') {
-    modal(`<h2>Assinatura vitalícia</h2><p>Libera o Appsico para sempre para <b>${esc(email)}</b>. Use quando a pessoa pagou por fora (Pix direto, transferência…). O valor entra na receita do painel.</p>
-      <label>Valor recebido (R$)</label><input id="vitVal" inputmode="decimal" placeholder="ex.: 599,00">
-      <div class="row-actions"><button onclick="closeModal()">Cancelar</button><button class="pri" id="vitOk">Liberar vitalícia</button></div>`);
-    $('vitOk').onclick = async () => {
-      const v = Number(String($('vitVal').value || '0').replace(/\./g, '').replace(',', '.')) || 0;
-      if (v < 0) return toast('Valor inválido');
-      closeModal();
-      const { error } = await sb.rpc('admin_vitalicio', { alvo: id, valor: v });
-      if (error) return toast(errMsg(error));
-      toast('Assinatura vitalícia liberada'); paneAdmin($('main'));
-    };
-    return;
-  }
   confirmBox('Confirmar', `Deseja ${ADM_ACAO[modo]} para ${email}?`, 'Confirmar', async () => {
     const { error } = await sb.rpc('admin_liberar', { alvo: id, modo });
     if (error) return toast(errMsg(error));

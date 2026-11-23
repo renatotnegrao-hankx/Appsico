@@ -162,7 +162,6 @@ begin
     'anual',        (select count(*) from a where plano = 'anual'),
     'anualpix',     (select count(*) from a where plano = 'anualpix'),
     'cortesia',     (select count(*) from a where plano = 'cortesia'),
-    'vitalicio',    (select count(*) from a where plano = 'vitalicio'),
     'mrr',          round((select count(*) from a where plano = 'mensal') * 24.90
                         + (select count(*) from a where plano in ('anual', 'anualpix')) * 199.00 / 12, 2),
     'receita_total',(select coalesce(sum(valor),0) from pagamentos where status = 'approved'),
@@ -174,7 +173,7 @@ begin
                        'receita_mes', (select coalesce(sum(valor),0) from pagamentos g where g.status = 'approved' and g.plano = pl.plano and g.criado_em >= date_trunc('month', now())),
                        'receita_total', (select coalesce(sum(valor),0) from pagamentos g where g.status = 'approved' and g.plano = pl.plano),
                        'mrr', round((select count(*) from a where a.plano = pl.plano) * pl.mensal, 2)) order by pl.ord)
-                     from (values (1,'mensal',24.90::numeric),(2,'anual',199.00/12),(3,'anualpix',199.00/12),(4,'vitalicio',0::numeric),(5,'cortesia',0::numeric)) pl(ord, plano, mensal)),
+                     from (values (1,'mensal',24.90::numeric),(2,'anual',199.00/12),(3,'anualpix',199.00/12),(4,'cortesia',0::numeric)) pl(ord, plano, mensal)),
     'por_mes',      (select json_agg(json_build_object(
                        'm', to_char(mm, 'YYYY-MM'),
                        'v', (select coalesce(sum(valor),0) from pagamentos g where g.status = 'approved' and date_trunc('month', g.criado_em) = mm),
@@ -199,7 +198,7 @@ begin
     order by p.criado_em desc limit 300;
 end $$;
 
--- Dar cortesia (30d | 90d | 1y | vitalicio), estender o teste (+15d) ou remover
+-- Dar cortesia (30d | 60d | 90d | 1y | vitalicio), estender o teste (+15d) ou remover
 create or replace function public.admin_liberar(alvo uuid, modo text)
 returns void language plpgsql security definer set search_path = public as $$
 begin
@@ -208,11 +207,12 @@ begin
     update perfis set valido_ate = null, plano = null, provedor = null, provedor_ref = null where id = alvo;
   elsif modo = 'teste15' then
     update perfis set teste_ate = greatest(teste_ate, now()) + interval '15 days' where id = alvo;
-  elsif modo not in ('30d', '90d', '1y', 'vitalicio') then
+  elsif modo not in ('30d', '60d', '90d', '1y', 'vitalicio') then
     raise exception 'opção inválida';
   else
     update perfis set
       valido_ate = case modo when '30d' then now() + interval '30 days'
+                             when '60d' then now() + interval '60 days'
                              when '90d' then now() + interval '90 days'
                              when '1y'  then now() + interval '1 year'
                              when 'vitalicio' then '9999-12-31'::timestamptz
@@ -222,20 +222,8 @@ begin
   end if;
 end $$;
 
--- Assinatura vitalícia (paga por fora, ex.: Pix direto): registra o valor recebido na receita
-create or replace function public.admin_vitalicio(alvo uuid, valor numeric default 0)
-returns void language plpgsql security definer set search_path = public as $$
-begin
-  if not public.is_admin() then raise exception 'acesso negado'; end if;
-  update perfis set valido_ate = '9999-12-31'::timestamptz, plano = 'vitalicio', provedor = 'admin', provedor_ref = 'vitalicio'
-   where id = alvo;
-  if coalesce(valor, 0) > 0 then
-    insert into pagamentos (user_id, email, provedor, plano, valor, status, externo_id)
-    values (alvo, (select email from perfis where id = alvo), 'manual', 'vitalicio', valor, 'approved', 'manual:' || gen_random_uuid());
-  end if;
-end $$;
-revoke all on function public.admin_vitalicio(uuid, numeric) from public, anon;
-grant execute on function public.admin_vitalicio(uuid, numeric) to authenticated;
+-- (a opção de assinatura vitalícia paga foi retirada)
+drop function if exists public.admin_vitalicio(uuid, numeric);
 
 revoke all on function public.meu_acesso(), public.criar_cofre(jsonb, jsonb, text), public.salvar_cofre(jsonb, bigint, text),
   public.trocar_chaves(jsonb), public.excluir_minha_conta(), public.is_admin(), public.admin_resumo(),
