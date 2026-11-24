@@ -950,7 +950,7 @@ function paneHome(m) {
         ${typeof pacienteBloqueado === 'function' && pacienteBloqueado(p.id) ? '<span class="tag warn">consulta</span>' : p.status === 'encerrado' ? '<span class="tag off">encerrado</span>' : needResp ? '<span class="tag warn">responsável</span>' : ''}
         <button class="pdel" title="Excluir paciente" aria-label="Excluir paciente" onclick="event.stopPropagation();delPatient('${p.id}')">${IC.trash}</button></div>`;
     }).join('')}</div>`
-    : `<div class="empty"><img src="logo.png" alt=""><h2>${DB.patients.length ? 'Nenhum paciente encontrado' : 'Nenhum prontuário ainda'}</h2><p>${DB.patients.length ? 'Ajuste a busca ou o filtro.' : 'Crie o primeiro prontuário para começar.'}</p></div>`}`;
+    : `<div class="empty"><img src="logo.png" alt=""><h2>${DB.patients.length ? 'Nenhum paciente encontrado' : 'Nenhum prontuário ainda'}</h2><p>${DB.patients.length ? 'Ajuste a busca ou o filtro.' : 'Crie o primeiro prontuário para começar.'}</p>${DB.patients.length ? '' : `<button class="demo-btn" onclick="carregarDemo()">${IC.users}<span>Conhecer com pacientes de demonstração</span></button><small class="meta" style="display:block;margin-top:8px">Você pode remover depois em Configurações → Dados de demonstração.</small>`}</div>`}`;
   $('q').oninput = e => { S.q = e.target.value; const pos = e.target.selectionStart; paneHome(m); $('q').focus(); $('q').setSelectionRange(pos, pos); };
   $('flt').onchange = e => { S.flt = e.target.value; paneHome(m); };
 }
@@ -1427,6 +1427,9 @@ function showRecord() {
 function paneSettings(m) {
   m.innerHTML = `<div class="head"><div><h1>Configurações</h1></div>${sairBtn()}</div>
   ${typeof contaCard === 'function' ? contaCard() : ''}
+  <details class="card acc"><summary><span class="acc-ic">${IC.users}</span><span class="acc-t"><b>Dados de demonstração</b><small>${DB.patients.some(p => p.demo) ? 'Carregados · toque para remover' : '10 pacientes fictícios para conhecer o app'}</small></span></summary><div class="acc-body">
+    <p style="margin:0 0 10px">Carrega 10 pacientes <b>fictícios</b> com cadastro, demanda, avaliação e diagnóstico, plano terapêutico, sessões com data e horário, agenda e pagamentos. Seus pacientes reais não são alterados.</p>
+    <div class="row-actions" style="justify-content:flex-start">${DB.patients.some(p => p.demo) ? `<button class="danger" onclick="removerDemo()">Remover dados de demonstração</button>` : `<button class="pri" onclick="carregarDemo()">Carregar demonstração</button>`}</div></div></details>
   <div class="card"><h3>Tema e cores</h3><div class="temas">${TEMAS.map(([k, n, d, side, grad, bg]) => `<label class="tema ${pref.get('theme', 'padrao') === k ? 'on' : ''} ${temaBloq(k) ? 'locked' : ''}"><input type="radio" name="theme" value="${k}" ${pref.get('theme', 'padrao') === k ? 'checked' : ''}>
       <span class="tprev" style="background:${bg}"><i class="ts" style="background:${side}"></i><i class="tb" style="background:${grad}"></i><i class="tl1"></i><i class="tl2"></i></span><b>${n}</b><small>${d}</small></label>`).join('')}</div></div>
   ${typeof cloudLinked === 'function' && cloudLinked() ? '' : `<details class="card acc"><summary><span class="acc-ic">${IC.crown}</span><span class="acc-t"><b>Meu plano</b><small>${esc(planoResumo())}</small></span></summary><div class="acc-body">${planoCard()}</div></details>`}
@@ -1452,9 +1455,6 @@ function paneSettings(m) {
     <div class="c4"><label>Novo PIN</label><input id="sNew" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" class="pin"></div>
     <div class="c4"><label>Confirmar</label><input id="sNew2" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" class="pin"></div></div>
     <div class="row-actions"><button class="pri" id="sPw">Alterar PIN</button></div></div></details>
-  <details class="card acc"><summary><span class="acc-ic">${IC.users}</span><span class="acc-t"><b>Dados de demonstração</b><small>10 pacientes fictícios para conhecer o app</small></span></summary><div class="acc-body">
-    <p style="margin:0 0 10px">Carrega 10 pacientes <b>fictícios</b> com cadastro, demanda, avaliação e diagnóstico, plano terapêutico, sessões com data e horário, agenda e pagamentos. Seus pacientes reais não são alterados.</p>
-    <div class="row-actions" style="justify-content:flex-start">${DB.patients.some(p => p.demo) ? `<button class="danger" onclick="removerDemo()">Remover dados de demonstração</button>` : `<button class="pri" onclick="carregarDemo()">Carregar demonstração</button>`}</div></div></details>
   <details class="card acc"><summary><span class="acc-ic">${IC.shield}</span><span class="acc-t"><b>Segurança</b><small>Como seus dados são protegidos</small></span></summary><div class="acc-body">
     <p style="margin:0 0 8px">• Dados criptografados com AES-256 e guardados somente neste aparelho.<br>
     • Bloqueio automático após ${CFG.autoLockMinutes} min sem uso ou ${CFG.backgroundLockSeconds} s em segundo plano.<br>

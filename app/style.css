@@ -827,3 +827,5 @@ body.mini .sync-st span{display:none}
 body.t-escuro .evc-ult{background:rgba(255,255,255,.04)}
 
 .ios-passos{margin:6px 0 10px;padding-left:20px}.ios-passos li{margin:4px 0}
+
+.empty .demo-btn{display:inline-flex;align-items:center;gap:8px;width:auto;margin-top:14px;padding:10px 16px}.empty .demo-btn svg{width:18px;height:18px;flex:none}
