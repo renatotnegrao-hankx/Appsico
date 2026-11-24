@@ -201,15 +201,22 @@ const LIMITE_GRATIS = 0;
 const planoGratis = () => cloudLinked() && !acessoInfo().ativo;
 const modoConsulta = planoGratis;
 const pacienteBloqueado = id => modoConsulta();
-let PH = null; // como os dados estavam na última gravação aceita
-function snapPacientes() { PH = DB ? fh(DB) : null; }
+let PH = null, ACEITO = null; // último estado aceito (cópia em memória) e sua impressão sem os dados de demonstração
+// os dados de demonstração ficam livres mesmo sem assinatura: carregar, mexer e remover
+const semDemo = d => d ? Object.assign({}, d, { patients: (d.patients || []).filter(p => !p.demo), agenda: (d.agenda || []).filter(a => !a.demo), contas: (d.contas || []).filter(c => !c.demo) }) : d;
+function snapPacientes() { if (!DB) { PH = ACEITO = null; return; } ACEITO = JSON.stringify(DB); PH = fh(semDemo(DB)); }
 let _bloqAviso = 0;
 function cloudBloqueia() {
-  if (!modoConsulta()) { PH = null; return false; }
-  if (!PH) { snapPacientes(); return false; }
-  if (PH === fh(DB)) return false;
-  // desfaz a alteração: volta ao último estado salvo neste aparelho
-  (async () => { try { if (V.data) DB = await decJSON(DEK, V.data); } catch (e) {} snapPacientes(); closeModal(); render(); if (Date.now() - _bloqAviso > 1500) { _bloqAviso = Date.now(); paywall(acessoInfo().conferir ? 'conferir' : 'gratis'); } })();
+  if (!DB) return false;
+  if (!modoConsulta() || !ACEITO) { snapPacientes(); return false; }
+  if (PH === fh(semDemo(DB))) { snapPacientes(); return false; } // só mudou a demonstração: aceito
+  // desfaz na hora a alteração nos dados reais, mantendo a demonstração como está
+  const atual = DB, base = JSON.parse(ACEITO), soDemo = (l) => (l || []).filter(x => x.demo);
+  base.patients = (base.patients || []).filter(x => !x.demo).concat(soDemo(atual.patients));
+  base.agenda = (base.agenda || []).filter(x => !x.demo).concat(soDemo(atual.agenda));
+  base.contas = (base.contas || []).filter(x => !x.demo).concat(soDemo(atual.contas));
+  DB = base; snapPacientes();
+  setTimeout(() => { closeModal(); render(); if (Date.now() - _bloqAviso > 1500) { _bloqAviso = Date.now(); paywall(acessoInfo().conferir ? 'conferir' : 'gratis'); } }, 0);
   return true;
 }
 const PLANOS_NUVEM = [

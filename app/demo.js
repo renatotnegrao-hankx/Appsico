@@ -1,4 +1,4 @@
-/* Dados de demonstração do Appsico: 10 pacientes fictícios com o fluxo completo de atendimento.
+/* Dados de demonstração do Appsico: 5 pacientes fictícios com o fluxo completo de atendimento.
  * Tudo o que é criado aqui fica marcado com demo:true e pode ser removido em Configurações. */
 (function () {
   const pad = n => String(n).padStart(2, '0');
@@ -92,10 +92,12 @@
       notas: ['Acolhimento. Paciente relata noites mal dormidas e cochilos à tarde.', 'Aplicação do ISI e início do diário do sono.', 'Devolutiva. Orientações de higiene do sono e controle de estímulos.', 'Restrição de tempo na cama combinada. Paciente motivada.', 'Diário mostra melhora na eficiência do sono.', 'Trabalhadas preocupações noturnas com a técnica do "tempo da preocupação".', 'Reavaliação com ISI: melhora expressiva. Preparação para a alta.', 'Sessão de encerramento. Revisão das estratégias e plano de manutenção.'] }
   ];
 
+  // 5 pacientes variados: adulta (ansiedade), criança com responsável, atendimento híbrido, on-line e idosa
+  const DEMO_NOMES = ['Ana Paula', 'Lucas Gabriel', 'Carla Cristina', 'Júlia Maria', 'Helena Beatriz'];
   window.carregarDemo = function () {
     if (DB.patients.some(p => p.demo)) return toast('Os dados de demonstração já foram carregados');
     const H = hoje(), ag = DB.agenda || (DB.agenda = []);
-    PACIENTES.forEach((x, idx) => {
+    PACIENTES.filter(x => DEMO_NOMES.includes(x.nome)).forEach((x, idx) => {
       const p = blankPatient();
       p.id = id(); p.demo = true;
       const ini = somaDias(H, -x.sem * 7);
@@ -143,10 +145,10 @@
     const cs = DB.contas || (DB.contas = []), m = iso(H).slice(0, 8);
     [['Aluguel da sala', 'Aluguel / sala', 1200, '05', true], ['Supervisão clínica', 'Supervisão', 350, '10', true], ['Internet e telefone', 'Energia / internet', 150, '15', true], ['Anuidade CRP (parcela)', 'Conselho (CRP)', 98, '28', false]]
       .forEach(([desc, cat, valor, dia, pago]) => cs.push({ id: id(), demo: true, tipo: 'pagar', desc, cat, valor, venc: m + dia, pago: pago && m + dia <= iso(H), pagoEm: pago && m + dia <= iso(H) ? m + dia : '' }));
-    save(); toast('10 pacientes de demonstração carregados'); go('home', { cur: null, flt: 'todos' });
+    save(); toast('5 pacientes de demonstração carregados'); go('home', { cur: null, flt: 'todos' });
   };
   window.removerDemo = function () {
-    confirmBox('Remover dados de demonstração?', 'Os 10 pacientes fictícios, suas consultas e as despesas de exemplo serão apagados. Seus pacientes reais não são afetados.', 'Remover', () => {
+    confirmBox('Remover dados de demonstração?', 'Os 5 pacientes fictícios, suas consultas e as despesas de exemplo serão apagados. Seus pacientes reais não são afetados.', 'Remover', () => {
       const ids = new Set(DB.patients.filter(p => p.demo).map(p => p.id));
       DB.patients = DB.patients.filter(p => !p.demo);
       DB.agenda = (DB.agenda || []).filter(a => !a.demo && !ids.has(a.pid));

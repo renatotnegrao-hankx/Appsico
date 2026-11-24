@@ -553,14 +553,16 @@ function premium() {
   const p = plano(); if (!p) return false;
   return !!p.ate && p.ate >= today();
 }
-function podeNovoPaciente() { if (typeof cloudLinked === 'function' && cloudLinked()) return !planoGratis(); return premium() || DB.patients.length < BILL.limiteGratis; }
+// pacientes de demonstração não contam em nenhum limite
+const pacientesReais = () => DB.patients.filter(p => !p.demo);
+function podeNovoPaciente() { if (typeof cloudLinked === 'function' && cloudLinked()) return !planoGratis(); return premium() || pacientesReais().length < BILL.limiteGratis; }
 function temaBloq(k) { return !premium() && !BILL.temasGratis.includes(k); }
 function checaTemaPlano() { if (DB && temaBloq(pref.get('theme', 'padrao'))) { pref.set('theme', 'padrao'); applyTheme(); } }
 function nomePlano(id) { return (PLANOS.find(x => x.id === id) || {}).nome || 'Premium'; }
 function planoResumo() {
   const p = plano();
   if (premium()) return p.origem === 'teste' ? `Premium de teste até ${fmtD(p.ate)}` : `Premium ${nomePlano(p.tipo)}${p.tipo === 'anualpix' ? ' · válido até ' + fmtD(p.ate) : ' · renova em ' + fmtD(p.ate)}`;
-  return `Plano grátis · ${Math.min(DB.patients.length, BILL.limiteGratis)} de ${BILL.limiteGratis} pacientes`;
+  return `Plano grátis · ${Math.min(pacientesReais().length, BILL.limiteGratis)} de ${BILL.limiteGratis} pacientes`;
 }
 function planoCard() {
   const p = plano(), on = premium();
@@ -578,7 +580,7 @@ function avisoVencimento() {
     <span class="pb-txt"><b>${dias <= 0 ? 'Seu Premium vence hoje' : `Seu Premium vence em ${dias} dia${dias > 1 ? 's' : ''}`}</b><small>${p.origem === 'teste' ? 'Premium de teste' : 'Anual no Pix'} válido até ${fmtD(p.ate)}. Renove para continuar com pacientes ilimitados e financeiro.</small></span><span class="pb-go">Renovar</span></button>`;
 }
 function bannerPlano() {
-  const n = DB.patients.length, L = BILL.limiteGratis, pct = Math.min(100, Math.round(n / L * 100));
+  const n = pacientesReais().length, L = BILL.limiteGratis, pct = Math.min(100, Math.round(n / L * 100));
   return `<button class="plano-banner" onclick="go('premium',{cur:null})"><span class="pb-ic">${IC.crown}</span>
     <span class="pb-txt"><b>Plano grátis · ${Math.min(n, L)} de ${L} pacientes</b><small>${n >= L ? 'Limite atingido. Libere pacientes ilimitados com o Premium.' : 'Conheça o Premium: pacientes ilimitados, financeiro e Pix.'}</small>
     <span class="pb-bar"><i style="width:${pct}%"></i></span></span><span class="pb-go">Ver planos</span></button>`;
@@ -1427,8 +1429,8 @@ function showRecord() {
 function paneSettings(m) {
   m.innerHTML = `<div class="head"><div><h1>Configurações</h1></div>${sairBtn()}</div>
   ${typeof contaCard === 'function' ? contaCard() : ''}
-  <details class="card acc"><summary><span class="acc-ic">${IC.users}</span><span class="acc-t"><b>Dados de demonstração</b><small>${DB.patients.some(p => p.demo) ? 'Carregados · toque para remover' : '10 pacientes fictícios para conhecer o app'}</small></span></summary><div class="acc-body">
-    <p style="margin:0 0 10px">Carrega 10 pacientes <b>fictícios</b> com cadastro, demanda, avaliação e diagnóstico, plano terapêutico, sessões com data e horário, agenda e pagamentos. Seus pacientes reais não são alterados.</p>
+  <details class="card acc"><summary><span class="acc-ic">${IC.users}</span><span class="acc-t"><b>Dados de demonstração</b><small>${DB.patients.some(p => p.demo) ? 'Carregados · toque para remover' : '5 pacientes fictícios para conhecer o app'}</small></span></summary><div class="acc-body">
+    <p style="margin:0 0 10px">Carrega 5 pacientes <b>fictícios</b> com cadastro, demanda, avaliação e diagnóstico, plano terapêutico, sessões com data e horário, agenda e pagamentos. Seus pacientes reais não são alterados, e os de demonstração <b>não contam</b> no limite do teste nem do plano.</p>
     <div class="row-actions" style="justify-content:flex-start">${DB.patients.some(p => p.demo) ? `<button class="danger" onclick="removerDemo()">Remover dados de demonstração</button>` : `<button class="pri" onclick="carregarDemo()">Carregar demonstração</button>`}</div></div></details>
   <div class="card"><h3>Tema e cores</h3><div class="temas">${TEMAS.map(([k, n, d, side, grad, bg]) => `<label class="tema ${pref.get('theme', 'padrao') === k ? 'on' : ''} ${temaBloq(k) ? 'locked' : ''}"><input type="radio" name="theme" value="${k}" ${pref.get('theme', 'padrao') === k ? 'checked' : ''}>
       <span class="tprev" style="background:${bg}"><i class="ts" style="background:${side}"></i><i class="tb" style="background:${grad}"></i><i class="tl1"></i><i class="tl2"></i></span><b>${n}</b><small>${d}</small></label>`).join('')}</div></div>
