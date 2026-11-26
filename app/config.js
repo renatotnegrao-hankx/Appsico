@@ -31,7 +31,8 @@ window.APPSICO_CONFIG = {
     clientSecret: ""
   },
   // Versão mostrada em Ajuda e suporte
-  versao: "5.6",
+  loja: "site",        // "site" = APK do site (assinatura pelo Mercado Pago); "play" = versão da Google Play (sem compras no app)
+  versao: "6.0",
   // Contato do suporte (aparece em Ajuda e suporte). Ex.: whatsapp: "11999998888", email: "suporte@appsico.com.br"
   suporte: {
     whatsapp: "",

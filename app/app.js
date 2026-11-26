@@ -594,8 +594,12 @@ const PAYWALL = {
   pix: ['Cobrança por Pix é Premium', 'Gerar o QR Code e o Pix copia e cola para o paciente faz parte do Premium.'],
   temas: ['Tema Premium', 'Os temas Appsico, Claro e Escuro são grátis. Os demais fazem parte do Premium.']
 };
+// Versão da Google Play: sem compras nem links de pagamento dentro do app (regras de faturamento da loja)
+const LOJA_PLAY = () => !!(CFG && CFG.loja === 'play');
 function paywall(k) {
-  const [t, d] = PAYWALL[k] || PAYWALL.pacientes;
+  const [t, d0] = PAYWALL[k] || PAYWALL.pacientes;
+  if (LOJA_PLAY()) { const d = k === 'conferir' ? d0 : 'Sem acesso ativo na sua conta, o Appsico só permite ver e exportar os prontuários. Nenhum dado foi apagado.'; return modal(`<div class="pw-top">${IC.lock}</div><h2 style="text-align:center">${esc(t)}</h2><p style="text-align:center">${esc(d)}</p><div class="row-actions" style="justify-content:center"><button class="pri" onclick="closeModal()">Entendi</button></div>`); }
+  const d = d0;
   modal(`<div class="pw-top">${IC.crown}</div><h2 style="text-align:center">${esc(t)}</h2><p style="text-align:center">${esc(d)}</p>
     <div class="row-actions" style="justify-content:center"><button onclick="closeModal()">Agora não</button><button class="pri" onclick="closeModal();go('premium',{cur:null})">Ver planos</button></div>`);
 }
@@ -857,7 +861,7 @@ async function relPDF() {
 }
 
 /* ---------- Ajuda e suporte ---------- */
-const FAQ = [
+const FAQ_TODAS = [
   ['Onde ficam os dados dos meus pacientes?', 'Neste aparelho, criptografados (AES-256) e protegidos pelo seu PIN. Com a conta na nuvem, eles vão para a sua conta já criptografados, para sincronizar celular e computador: ninguém, nem a equipe do Appsico, consegue ler seus prontuários.'],
   ['Esqueci meu PIN. E agora?', 'Na tela do PIN, toque em "Esqueci meu PIN" e entre com a senha da conta para criar um PIN novo. Com a biometria ativada, você também entra com a digital ou o rosto. Esqueceu a senha da conta também? Use "Esqueci minha senha": com o link do e-mail, o Appsico devolve o acesso aos prontuários, mesmo sem o código de recuperação.'],
   ['Como faço backup?', 'Vá em Backup e toque em fazer backup. O arquivo é salvo criptografado na pasta "appsico" do seu Google Drive ou onde você escolher. Faça pelo menos uma vez por semana.'],
@@ -867,6 +871,7 @@ const FAQ = [
   ['Como funciona a assinatura e como cancelo?', 'Toda conta nova tem 15 dias grátis com tudo liberado. Depois, o app funciona enquanto a assinatura estiver ativa. Sem assinatura, ele fica em modo consulta: você vê e exporta todos os prontuários, mas não registra nada novo, e nenhum dado é apagado. O app confere a assinatura pela internet pelo menos a cada 7 dias. Os planos Mensal e Anual são cobrados no cartão pelo Mercado Pago e podem ser cancelados a qualquer momento. O Anual no Pix é um pagamento único que vale 1 ano.'],
   ['Por que não consigo tirar print da tela?', 'Por sigilo: o Appsico bloqueia capturas de tela para que informações de pacientes não fiquem salvas na galeria nem apareçam na lista de apps recentes.']
 ];
+const FAQ = () => LOJA_PLAY() ? FAQ_TODAS.filter(([q]) => !/assinatura|pagamento|plano|preço|cancel/i.test(q)) : FAQ_TODAS;
 const POLITICA = [
   ['Quem somos', 'O Appsico é um aplicativo de prontuário eletrônico para psicólogos. Nesta política, "você" é o(a) psicólogo(a) que usa o app.'],
   ['Prontuários criptografados', 'Cadastro profissional, prontuários, agenda, documentos e dados financeiros são criptografados no seu aparelho. Com a conta na nuvem, são enviados à sua conta só dessa forma (provedor Supabase), para sincronizar seus aparelhos. O Appsico não vende e não compartilha esses dados.'],
@@ -889,7 +894,7 @@ function paneAjuda(m) {
       : `<div class="note">O contato do suporte ainda não foi configurado.</div>`}</div>
     <div class="card"><h3>Gostou do Appsico?</h3><p class="meta" style="margin-top:-4px">Sua avaliação na Google Play ajuda outros psicólogos a conhecer o app.</p>
       <div class="row-actions" style="justify-content:flex-start"><a class="btn" href="https://play.google.com/store/apps/details?id=br.com.appsico.app" target="_blank" rel="noopener">★ Avaliar na Google Play</a></div></div>
-    <div class="card"><h3>Dúvidas frequentes</h3><div class="faq">${FAQ.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div></div>
+    <div class="card"><h3>Dúvidas frequentes</h3><div class="faq">${FAQ().map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div></div>
     <details class="card acc"><summary><span class="acc-ic">${IC.shield}</span><span class="acc-t"><b>Política de privacidade</b><small>Como o Appsico trata os seus dados</small></span></summary><div class="acc-body politica">
       ${POLITICA.map(([t, d]) => `<h4>${esc(t)}</h4><p>${esc(d)}</p>`).join('')}${em ? `<h4>Contato</h4><p>${esc(em)}</p>` : ''}</div></details>
     <p class="meta" style="text-align:center">Appsico${v ? ' · versão ' + esc(v) : ''} · seus dados ficam só neste aparelho</p>`;

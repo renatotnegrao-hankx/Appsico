@@ -76,7 +76,7 @@ function errMsg(e) {
   if (/Password should be|weak/i.test(m)) return 'Senha fraca: use pelo menos 8 caracteres, com letras e números.';
   if (/rate limit|too many/i.test(m)) return 'Muitas tentativas. Aguarde alguns minutos.';
   if (/Failed to fetch|NetworkError|network/i.test(m)) return 'Sem conexão com a internet.';
-  if (/assinatura inativa/i.test(m)) return 'Seu acesso terminou. Assine para continuar.';
+  if (/assinatura inativa/i.test(m)) return typeof LOJA_PLAY === 'function' && LOJA_PLAY() ? 'Seu acesso terminou.' : 'Seu acesso terminou. Assine para continuar.';
   return m || 'Erro inesperado.';
 }
 const senhaOk = s => s.length >= 8 && /[A-Za-z]/.test(s) && /\d/.test(s);
@@ -230,6 +230,7 @@ function abrirLink(url) {
   else { const w = window.open(url, '_blank', 'noopener'); if (!w) location.href = url; }
 }
 async function cloudAssinar(plano) {
+  if (typeof LOJA_PLAY === 'function' && LOJA_PLAY()) return;
   try {
     toast('Abrindo o Mercado Pago…');
     const { data, error } = await sb.functions.invoke('mp-assinar', { body: { plano } });
@@ -247,7 +248,7 @@ async function conferirPagamento() {
 // O APK só instala em Android. No iPhone/iPad o Appsico é usado pelo Safari (adicionado à Tela de Início).
 const ehIOS = () => /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const ehAndroid = () => /Android/i.test(navigator.userAgent);
-function botaoApp() { return NATIVE ? '' : ehIOS() ? '<button onclick="instrucoesIOS()">Usar no iPhone</button>' : '<button onclick="baixarApk()">Baixar app Android</button>'; }
+function botaoApp() { return NATIVE || (typeof LOJA_PLAY === 'function' && LOJA_PLAY()) ? '' : ehIOS() ? '<button onclick="instrucoesIOS()">Usar no iPhone</button>' : '<button onclick="baixarApk()">Baixar app Android</button>'; }
 function instrucoesIOS() {
   modal(`<h2>Appsico no iPhone e iPad</h2>
     <p>O app para instalar (APK) é exclusivo para Android. No iPhone e no iPad você usa o Appsico pelo <b>Safari</b>, com os mesmos prontuários, sincronizados e criptografados.</p>
@@ -553,7 +554,7 @@ function contaCard() {
   return `<details class="card acc" open><summary><span class="acc-ic">${IC.backup}</span><span class="acc-t"><b>Conta e nuvem</b><small>${esc(V.cloud.email)}</small></span></summary><div class="acc-body">
     <div class="conta-st ${a.ativo ? (a.teste ? 'teste' : 'ok') : 'fim'}"><b>${esc(st)}</b><span>${syncBadge()}</span></div>
     <div class="row-actions" style="justify-content:flex-start;flex-wrap:wrap">
-      <button class="pri" onclick="go('premium',{cur:null})">${a.ativo && !a.teste ? 'Minha assinatura' : 'Assinar'}</button>
+      <button class="pri" onclick="go('premium',{cur:null})">${typeof LOJA_PLAY === 'function' && LOJA_PLAY() ? 'Minha conta' : a.ativo && !a.teste ? 'Minha assinatura' : 'Assinar'}</button>
       <button onclick="syncNow(true)">Sincronizar agora</button>
       ${botaoApp()}
       <button onclick="cloudTrocarSenha()">Trocar senha da conta</button>
@@ -567,8 +568,18 @@ function contaCard() {
 }
 const nomePlanoN = id => ({ mensal: 'mensal', anual: 'anual', anualpix: 'anual (Pix)', vitalicio: 'vitalícia', cortesia: 'cortesia' }[id] || '');
 
+/* ---------- versão da Google Play: só mostra a situação da conta, sem compras no app ---------- */
+function panePremiumPlay(m) {
+  const a = acessoInfo();
+  const st = a.desconhecido ? 'Verificando…' : a.teste ? `Teste grátis: ${a.dias} dia${a.dias === 1 ? '' : 's'} restante${a.dias === 1 ? '' : 's'}` : a.ativo ? (vitalicio(a.ate) ? 'Acesso completo' : `Acesso completo até ${fmtD(a.ate)}`) : a.conferir ? 'Conecte à internet para conferir sua conta' : 'Modo consulta';
+  m.innerHTML = `<div class="head"><div><h1>Minha conta</h1><div class="meta">${esc(V.cloud.email)}</div></div>${sairBtn()}</div>
+    <div class="card"><div class="conta-st ${a.ativo ? (a.teste ? 'teste' : 'ok') : 'fim'}"><b>${esc(st)}</b><span>${syncBadge()}</span></div>
+    ${a.ativo ? '<p>Tudo liberado: prontuários, agenda, lembretes, documentos, financeiro e Pix, sincronizados entre os seus aparelhos.</p>' : '<p>Você continua vendo e exportando todos os prontuários em PDF. Nenhum dado é apagado.</p>'}
+    <div class="row-actions" style="justify-content:flex-start"><button onclick="conferirPagamento()">Atualizar situação</button></div></div>`;
+}
 /* ---------- tela de planos (nuvem) ---------- */
 function panePremiumNuvem(m) {
+  if (typeof LOJA_PLAY === 'function' && LOJA_PLAY()) return panePremiumPlay(m);
   const a = acessoInfo(), sel = S.planoSel || 'anual';
   m.innerHTML = `<div class="head"><div><h1>Assinatura Appsico</h1><div class="meta">${a.teste ? `Teste grátis até ${fmtD(a.ate)} (${a.dias} dia${a.dias === 1 ? '' : 's'})` : a.ativo ? (vitalicio(a.ate) ? (a.plano === 'vitalicio' ? 'Assinatura vitalícia' : `Assinatura ${nomePlanoN(a.plano)} vitalícia`) : `Assinatura ${nomePlanoN(a.plano)} ativa até ${fmtD(a.ate)}`) : a.conferir ? 'Conecte à internet para conferir sua assinatura' : 'Sem assinatura ativa: o app está em modo consulta'}</div></div>${sairBtn()}</div>
     <div class="prem-hero"><span class="ph-ic">${IC.crown}</span><div><b>${a.ativo && !a.teste ? 'Obrigado por assinar o Appsico!' : 'Continue com tudo o que você já usa'}</b>
@@ -580,7 +591,8 @@ function panePremiumNuvem(m) {
     <div class="row-actions prem-act"><button onclick="conferirPagamento()">Já paguei — atualizar</button>${botaoApp()}</div>
     <p class="meta" style="text-align:center;margin-top:10px">Pagamento pelo Mercado Pago. Mensal e Anual renovam sozinhos no cartão e podem ser cancelados a qualquer momento na sua conta do Mercado Pago. O Anual no Pix é pago uma vez e vale 1 ano.</p>`;
 }
-function bannerNuvem() {
+function bannerNuvem(...x) { const h = bannerNuvemBase(...x); return typeof LOJA_PLAY === 'function' && LOJA_PLAY() && h ? h.replace(/<span class="pb-go">[^<]*<\/span>/g, '<span class="pb-go">Ver</span>').replace(/ Assine para voltar a registrar\./g, '').replace(/ Assine para continuar\./g, '') : h; }
+function bannerNuvemBase() {
   const a = acessoInfo(); if (a.desconhecido) return '';
   if (!a.ativo) return a.conferir
     ? `<button class="plano-banner fim" onclick="conferirPagamento()"><span class="pb-ic">${IC.lock}</span><span class="pb-txt"><b>Conecte à internet</b><small>Faz mais de ${DIAS_OFFLINE} dias que o app não confere sua assinatura. Até lá, só consulta e exportação.</small></span><span class="pb-go">Conferir</span></button>`
