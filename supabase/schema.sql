@@ -234,3 +234,41 @@ grant execute on function public.meu_acesso(), public.criar_cofre(jsonb, jsonb, 
 
 -- 11) Arquivo do app Android (APK) em pasta privada: só quem tem acesso ativo baixa
 insert into storage.buckets (id, name, public) values ('apk', 'apk', false) on conflict (id) do nothing;
+
+-- 12) Recuperação de acesso pelo Appsico (custódia da chave)
+-- Uma cópia da chave dos prontuários fica guardada aqui, trancada com uma chave do Supabase Vault.
+-- Só volta para o próprio psicólogo, logado na conta dele (pela senha ou pelo link de "esqueci minha senha" do e-mail).
+create extension if not exists pgcrypto with schema extensions;
+create table if not exists public.custodia (
+  user_id uuid primary key references auth.users on delete cascade,
+  chave bytea not null,
+  atualizado_em timestamptz not null default now()
+);
+alter table public.custodia enable row level security; -- sem políticas: ninguém lê direto, só pelas funções abaixo
+do $$ begin
+  if not exists (select 1 from vault.secrets where name = 'appsico_custodia') then
+    perform vault.create_secret(encode(extensions.gen_random_bytes(32), 'base64'), 'appsico_custodia', 'Chave da recuperação de acesso do Appsico');
+  end if;
+end $$;
+create or replace function public.custodia_guardar(p_dek text)
+returns void language plpgsql security definer set search_path = public, extensions as $$
+declare k text;
+begin
+  if auth.uid() is null then raise exception 'não autenticado'; end if;
+  if p_dek is null or length(p_dek) < 40 then raise exception 'chave inválida'; end if;
+  select decrypted_secret into k from vault.decrypted_secrets where name = 'appsico_custodia';
+  insert into custodia (user_id, chave) values (auth.uid(), pgp_sym_encrypt(p_dek, k, 'cipher-algo=aes256'))
+  on conflict (user_id) do update set chave = excluded.chave, atualizado_em = now();
+end $$;
+create or replace function public.custodia_recuperar()
+returns text language plpgsql security definer set search_path = public, extensions as $$
+declare k text; r text;
+begin
+  if auth.uid() is null then raise exception 'não autenticado'; end if;
+  select decrypted_secret into k from vault.decrypted_secrets where name = 'appsico_custodia';
+  select pgp_sym_decrypt(chave, k) into r from custodia where user_id = auth.uid();
+  if r is null then raise exception 'sem_custodia'; end if;
+  return r;
+end $$;
+revoke all on function public.custodia_guardar(text), public.custodia_recuperar() from public, anon;
+grant execute on function public.custodia_guardar(text), public.custodia_recuperar() to authenticated;

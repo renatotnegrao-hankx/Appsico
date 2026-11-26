@@ -156,6 +156,7 @@ async function syncNow(manual) {
 function cloudStart() {
   if (!cloudLinked()) return;
   snapPacientes();
+  if (typeof garanteCustodia === 'function') garanteCustodia();
   setSync(SYNC.st === 'off' ? 'off' : 'pend');
   syncNow();
   clearInterval(syncLoop); syncLoop = setInterval(() => { if (DEK) syncNow(); }, 60000);
@@ -315,7 +316,7 @@ function showCloudStart(modo, msg) {
   };
 }
 function showCloudForgot(email) {
-  authScreen(`<h2>Esqueci minha senha</h2><div class="sub">Enviaremos um link para criar uma nova senha. Depois, ao entrar, o app vai pedir o seu <b>código de recuperação</b> para abrir os prontuários.</div>
+  authScreen(`<h2>Esqueci minha senha</h2><div class="sub">Enviaremos um link para criar uma nova senha. Depois, ao entrar, use o seu <b>código de recuperação</b> ou toque em <b>Recuperar meu acesso pelo Appsico</b>. Dica: se você ainda abre o Appsico com o PIN em algum aparelho, crie a senha nova por lá, em Configurações → Recuperação de acesso.</div>
     <div class="f"><label>E-mail da conta</label><input id="fpEmail" type="email" inputmode="email" value="${esc(email || '')}"></div>
     <button class="pri" id="fpGo">Enviar link</button><div class="err" id="fpErr"></div>
     <div class="links"><a id="fpBack">Voltar</a></div>`);
@@ -342,7 +343,7 @@ function showNovaSenhaConta() {
     if (error) { busy($('nsGo'), false); return $('nsErr').textContent = errMsg(error); }
     await sb.auth.signOut().catch(() => {});
     history.replaceState(null, '', location.pathname);
-    showCloudStart('entrar', 'Senha alterada. Entre com a nova senha; o app vai pedir seu código de recuperação para reabrir os prontuários.');
+    showCloudStart('entrar', 'Senha alterada. Entre com a nova senha; para reabrir os prontuários, use o código de recuperação ou a recuperação pelo Appsico.');
   };
 }
 
@@ -361,7 +362,7 @@ async function cloudAposLogin(senha, btn) {
       DEKraw = rnd(32); DEK = await aesKey(DEKraw);
       const rec = genRecovery();
       const chaves = { pw: await wrapAcct(senha, DEKraw), rec: await wrapRec(rec, DEKraw) };
-      DB = { prof: { nome: meta.nome || pref.get('pendNome', ''), crp: meta.crp || pref.get('pendCrp', ''), email: user.email }, patients: [] };
+      DB = { prof: { nome: meta.nome || pref.get('pendNome', ''), crp: meta.crp || pref.get('pendCrp', ''), email: user.email }, patients: [], seg: { recCode: rec, recEm: today() } };
       const { data: ver, error: e2 } = await sb.rpc('criar_cofre', { p_chaves: chaves, p_dados: await encJSON(DB), p_disp: DISP });
       if (e2) return fail(errMsg(e2));
       novoCofreLocal(user, chaves.rec, ver || 1);
@@ -391,7 +392,9 @@ function showCloudRecCode(user, row, senha) {
   authScreen(`<h2>Código de recuperação</h2><div class="sub">A senha da conta foi trocada. Para reabrir os prontuários com segurança, digite o código de recuperação de 20 caracteres que você anotou ao criar a conta.</div>
     <div class="f"><label>Código de recuperação</label><input id="rcCode" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" autocapitalize="characters" style="font-family:monospace"></div>
     <button class="pri" id="rcGo">Continuar</button><div class="err" id="rcErr"></div>
+    <div class="note" style="margin-top:12px"><b>Perdeu o código?</b> Você entrou pela sua conta, então o Appsico pode devolver o acesso aos seus prontuários.<button id="rcCust" style="display:block;width:100%;margin-top:8px">Recuperar meu acesso pelo Appsico</button></div>
     <div class="links"><a id="rcBack">Voltar</a></div>`);
+  $('rcCust').onclick = () => recuperarPelaCustodia(user, row, senha, $('rcCust'), $('rcErr'));
   $('rcBack').onclick = async () => { await sb.auth.signOut().catch(() => {}); showCloudStart('entrar'); };
   $('rcGo').onclick = async () => {
     busy($('rcGo'), true, 'Verificando…');
@@ -543,7 +546,7 @@ function cloudExcluirConta() {
 function contaCard() {
   if (!CLOUD) return '';
   if (!cloudLinked()) return `<details class="card acc" open><summary><span class="acc-ic">${IC.backup}</span><span class="acc-t"><b>Conta na nuvem</b><small>Use também no computador</small></span></summary><div class="acc-body">
-    <p style="margin:0 0 10px">Ative sua conta para sincronizar os prontuários entre o celular e o computador. Tudo vai <b>criptografado</b>: ninguém além de você consegue ler.</p>
+    <p style="margin:0 0 10px">Ative sua conta para sincronizar os prontuários entre o celular e o computador. Tudo vai <b>criptografado</b>, e você pode recuperar o acesso pelo seu e-mail se esquecer a senha.</p>
     <div class="row-actions" style="justify-content:flex-start"><button class="pri" onclick="cloudLigar()">Ativar conta na nuvem</button></div></div></details>`;
   const a = acessoInfo();
   const st = a.desconhecido ? 'Verificando…' : a.teste ? `Teste grátis: ${a.dias} dia${a.dias === 1 ? '' : 's'} restante${a.dias === 1 ? '' : 's'}` : a.ativo ? (vitalicio(a.ate) ? (a.plano === 'vitalicio' ? 'Assinatura vitalícia' : `Assinatura ${nomePlanoN(a.plano)} · vitalícia`) : `Assinatura ${nomePlanoN(a.plano)} · até ${fmtD(a.ate)}`) : a.conferir ? 'Conecte à internet para conferir a assinatura' : 'Sem assinatura ativa · modo consulta';
@@ -560,7 +563,7 @@ function contaCard() {
       <button onclick="cloudSair()">Sair da conta neste aparelho</button>
       <button class="danger" onclick="cloudExcluirConta()">Excluir conta</button>
     </div>
-    <p class="meta" style="margin-top:10px">Os prontuários são criptografados neste aparelho antes de ir para a nuvem. Se esquecer a senha, só o código de recuperação reabre os dados.</p></div></details>`;
+    <p class="meta" style="margin-top:10px">Os prontuários são criptografados neste aparelho antes de ir para a nuvem. Se esquecer a senha, veja as formas de recuperar em <b>Recuperação de acesso</b>, logo abaixo.</p></div></details>`;
 }
 const nomePlanoN = id => ({ mensal: 'mensal', anual: 'anual', anualpix: 'anual (Pix)', vitalicio: 'vitalícia', cortesia: 'cortesia' }[id] || '');
 

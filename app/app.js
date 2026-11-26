@@ -114,7 +114,7 @@ async function createVault({ nome, crp, email, pw, user }) {
   V = { v: 1, app: 'appsico', user: user || '', email: email.toLowerCase(), createdAt: new Date().toISOString(),
         pw: await wrapWithPassword(pw), rec: Object.assign({ salt: b64e(rsalt), it: ITER }, await seal(rk, DEKraw)),
         guard: { fails: 0, until: 0 }, data: null };
-  DB = { prof: { nome, crp, email: email.toLowerCase() }, patients: [] };
+  DB = { prof: { nome, crp, email: email.toLowerCase() }, patients: [], seg: { recCode: rec, recEm: new Date().toISOString().slice(0, 10) } };
   await Secure.set('dek', b64e(DEKraw));
   await persist();
   return rec;
@@ -239,7 +239,7 @@ function showSetup() {
   };
 }
 function showRecovery(rec, next) {
-  authScreen(`<h2>Código de recuperação</h2><div class="sub">${typeof CLOUD !== 'undefined' && CLOUD ? 'Se você esquecer a senha da conta, este código é a única forma de reabrir os prontuários: nem o Appsico consegue recuperá-los. Anote e guarde em local seguro, fora do celular.' : 'Se você esquecer o PIN e não tiver acesso ao e-mail, este código é a única forma de abrir os prontuários. Ele também é necessário para restaurar backups. Anote e guarde fora do celular.'}</div>
+  authScreen(`<h2>Código de recuperação</h2><div class="sub">${typeof CLOUD !== 'undefined' && CLOUD ? 'Guarde este código: com ele você reabre os prontuários se esquecer a senha. Se perder o código também, ainda dá para recuperar pelo seu e-mail ou por outro aparelho onde você entra com o PIN. Você pode ver o código depois em Configurações → Recuperação de acesso.' : 'Se você esquecer o PIN e não tiver acesso ao e-mail, este código é a única forma de abrir os prontuários. Ele também é necessário para restaurar backups. Anote e guarde fora do celular.'}</div>
     <div class="rec-code">${rec}</div>
     <button id="rCopy" style="width:100%;margin-bottom:12px">Copiar código</button>
     <label class="check" style="margin-bottom:12px"><input type="checkbox" id="rOk"> Anotei o código em local seguro</label>
@@ -280,7 +280,7 @@ function showLogin(reason) {
     await writeVault().catch(() => {});
     if (V.pw.kind !== 'pin6') return showCreatePin('Para mais segurança, o Appsico agora usa um PIN de 4 números. Crie o seu.');
     enterApp();
-  };
+  };  if (typeof bioNaEntrada === 'function') bioNaEntrada();
 }
 
 function showCreatePin(msg) {
@@ -859,7 +859,7 @@ async function relPDF() {
 /* ---------- Ajuda e suporte ---------- */
 const FAQ = [
   ['Onde ficam os dados dos meus pacientes?', 'Neste aparelho, criptografados (AES-256) e protegidos pelo seu PIN. Com a conta na nuvem, eles vão para a sua conta já criptografados, para sincronizar celular e computador: ninguém, nem a equipe do Appsico, consegue ler seus prontuários.'],
-  ['Esqueci meu PIN. E agora?', 'Na tela do PIN, toque em "Esqueci o PIN" e use o código de recuperação que você guardou ao criar o acesso. Sem o PIN e sem esse código, os dados não podem ser abertos, porque nem o Appsico tem a chave.'],
+  ['Esqueci meu PIN. E agora?', 'Na tela do PIN, toque em "Esqueci meu PIN" e entre com a senha da conta para criar um PIN novo. Com a biometria ativada, você também entra com a digital ou o rosto. Esqueceu a senha da conta também? Use "Esqueci minha senha": com o link do e-mail, o Appsico devolve o acesso aos prontuários, mesmo sem o código de recuperação.'],
   ['Como faço backup?', 'Vá em Backup e toque em fazer backup. O arquivo é salvo criptografado na pasta "appsico" do seu Google Drive ou onde você escolher. Faça pelo menos uma vez por semana.'],
   ['Vou trocar de celular. Como levo meus dados?', 'Com a conta na nuvem, basta instalar o Appsico no celular novo e entrar com seu e-mail e senha. Sem conta, faça um backup no celular antigo e restaure no novo com o código de recuperação.'],
   ['Como confirmo as consultas pelo WhatsApp?', 'Em Lembretes, escolha o dia e toque em Enviar em cada paciente: o WhatsApp abre com a mensagem pronta. Quando ele responder, toque em Confirmou.'],
@@ -869,7 +869,8 @@ const FAQ = [
 ];
 const POLITICA = [
   ['Quem somos', 'O Appsico é um aplicativo de prontuário eletrônico para psicólogos. Nesta política, "você" é o(a) psicólogo(a) que usa o app.'],
-  ['Prontuários criptografados', 'Cadastro profissional, prontuários, agenda, documentos e dados financeiros são criptografados no seu aparelho. Com a conta na nuvem, são enviados à sua conta só dessa forma (provedor Supabase), para sincronizar seus aparelhos. O Appsico não consegue ler, não vende e não compartilha esses dados.'],
+  ['Prontuários criptografados', 'Cadastro profissional, prontuários, agenda, documentos e dados financeiros são criptografados no seu aparelho. Com a conta na nuvem, são enviados à sua conta só dessa forma (provedor Supabase), para sincronizar seus aparelhos. O Appsico não vende e não compartilha esses dados.'],
+  ['Recuperação de acesso', 'Para que você não perca os prontuários se esquecer a senha e o código de recuperação, uma cópia da chave que abre os seus dados fica guardada na nuvem, trancada em um cofre de chaves separado (Supabase Vault). Ela só é devolvida a você, depois que você entra na sua conta pela senha ou pelo link enviado ao seu e-mail. O Appsico não usa essa cópia para nenhum outro fim.'],
   ['Backup', 'Os backups são criptografados antes de sair do aparelho e vão apenas para o local que você escolher, como o seu Google Drive. Sem o seu código de recuperação, o arquivo não pode ser aberto.'],
   ['Compartilhamentos', 'PDFs, cobranças Pix e lembretes só são enviados quando você toca em compartilhar, e seguem pelo aplicativo que você escolher (por exemplo, WhatsApp ou e-mail).'],
   ['Conta e assinatura', 'Para a conta, guardamos nome, CRP, e-mail e a situação da assinatura. Os pagamentos são processados pelo Mercado Pago; o Appsico não recebe dados de cartão nem dados de pacientes.'],
@@ -1434,6 +1435,7 @@ function showRecord() {
 function paneSettings(m) {
   m.innerHTML = `<div class="head"><div><h1>Configurações</h1></div>${sairBtn()}</div>
   ${typeof contaCard === 'function' ? contaCard() : ''}
+  ${typeof acessoCard === 'function' ? acessoCard() : ''}
   <details class="card acc"><summary><span class="acc-ic">${IC.users}</span><span class="acc-t"><b>Dados de demonstração</b><small>${DB.patients.some(p => p.demo) ? 'Carregados · toque para remover' : '5 pacientes fictícios para conhecer o app'}</small></span></summary><div class="acc-body">
     <p style="margin:0 0 10px">Carrega 5 pacientes <b>fictícios</b> com cadastro, demanda, avaliação e diagnóstico, plano terapêutico, sessões com data e horário, agenda e pagamentos. Seus pacientes reais não são alterados, e os de demonstração <b>não contam</b> no limite do teste nem do plano.</p>
     <div class="row-actions" style="justify-content:flex-start">${DB.patients.some(p => p.demo) ? `<button class="danger" onclick="removerDemo()">Remover dados de demonstração</button>` : `<button class="pri" onclick="carregarDemo()">Carregar demonstração</button>`}</div></div></details>
@@ -1488,7 +1490,7 @@ function paneSettings(m) {
     busy($('sPw'), true, 'Verificando…');
     try { await openPw($('sOld').value, V.pw); } catch (e) { busy($('sPw'), false); return toast('PIN atual incorreto'); }
     await setNewPassword(nw); busy($('sPw'), false); ['sOld', 'sNew', 'sNew2'].forEach(i => $(i).value = ''); toast('PIN alterado');
-  };
+  };  if (typeof acessoCardDepois === 'function') acessoCardDepois();
 }
 
 /* ---------- Backup ---------- */

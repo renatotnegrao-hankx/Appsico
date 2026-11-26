@@ -855,3 +855,12 @@ body.t-escuro .an-sc{background:rgba(255,255,255,.08)}body.t-escuro .an-prog div
 .an-termo h3{margin-top:0}.an-termo>.pri{display:inline-flex;align-items:center;gap:8px;margin:10px 0 6px}.an-termo>.pri svg{width:18px;height:18px}
 .an-termo-txt{margin:8px 0;border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:#fafbfd}.an-termo-txt summary{cursor:pointer;font-weight:600;color:var(--pri,#0b56b8)}
 .an-termo-txt div{max-height:340px;overflow:auto;font-size:13.5px;line-height:1.5;margin-top:6px}.an-termo-txt p{margin:0 0 8px}
+
+/* recuperação de acesso e biometria */
+.acs-l{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}.acs-l:last-child{border-bottom:none}
+.acs-l b{display:block}.acs-l small{display:block;color:var(--muted);font-size:13px;margin-top:2px;line-height:1.45}
+.acs-st{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px}
+.acs-st.ok{background:#e4f7ef;color:#0f8a5f}.acs-st.pend{background:#fff3e0;color:#c46a00}
+.acs-b{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.acs-b button{padding:8px 12px;font-size:13.5px}
+.bio-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-bottom:10px;padding:13px;border-radius:12px;border:1.5px solid var(--pri,#0b56b8);background:#eef4ff;color:var(--pri,#0b56b8);font-weight:600}
+.bio-btn svg{width:20px;height:20px}
