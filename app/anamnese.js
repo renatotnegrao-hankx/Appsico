@@ -218,6 +218,9 @@
   };
   // ids estáveis: modelo-seção-item
   for (const [mk, f] of Object.entries(FICHAS)) f.secoes.forEach((s, si) => { s.itens = s.itens.map((it, ii) => Object.assign(typeof it === 'string' ? { q: it } : it, { id: `${mk[0]}${si}_${ii}` })); });
+  // múltipla escolha em todas as perguntas possíveis, sempre com campo de observação (anamnese-opcoes.js)
+  if (typeof window.aplicarOpcoesAnamnese === 'function') window.aplicarOpcoesAnamnese(FICHAS);
+  for (const f of Object.values(FICHAS)) f.secoes.forEach(s => s.itens.forEach(it => { if (it.op) it.t = 1; }));
   window.FICHAS_ANAMNESE = FICHAS;
 
   const modeloPorIdade = n => n === null || n === undefined || n === '' || isNaN(n) ? null : (+n >= 18 ? 'adulto' : 'infanto');
@@ -248,9 +251,18 @@
     }
     return '';
   }
+  // respostas antigas em texto livre numa pergunta que agora tem opções vão para o campo de observação
+  function migra(p) {
+    const R = p.anamnese.resp;
+    Object.keys(R).forEach(m => { const f = FICHAS[m]; if (!f) return; f.secoes.forEach(s => s.itens.forEach(it => {
+      const v = R[m][it.id]; if (!it.op || v === undefined || Array.isArray(v) || v === '') return;
+      if (!it.op.includes(v)) { R[m][it.id + '_t'] = [R[m][it.id + '_t'], v].filter(Boolean).join(' — '); R[m][it.id] = it.m ? [] : ''; }
+    })); });
+  }
   function garante(p, modelo) {
     p.anamnese = p.anamnese || { modelo: null, resp: {} };
     p.anamnese.resp = p.anamnese.resp || {};
+    if (!p.anamnese._v2) { migra(p); p.anamnese._v2 = 1; }
     if (modelo && !p.anamnese.resp[modelo]) {
       const r = p.anamnese.resp[modelo] = {};
       FICHAS[modelo].secoes.forEach(s => s.itens.forEach(it => { if (it.pf) { const v = preenchimento(p, it); if (v) r[it.id] = v; } }));
@@ -312,8 +324,8 @@
       const ops = it.op ? `<div class="an-ops">${it.op.map(o => `<button type="button" data-a="${it.id}" data-v="${esc(o)}" data-m="${it.m ? 1 : 0}" class="${(it.m ? Array.isArray(v) && v.includes(o) : v === o) ? 'on' : ''}" onclick="anOpcao(this)">${esc(o)}</button>`).join('')}</div>` : '';
       const campo = it.tipo === 'date'
         ? `<input type="date" data-a="${it.id}" value="${esc(v || '')}" onchange="anTexto(this)">`
-        : (!it.op || it.t) ? `<textarea rows="1" data-a="${it.id + (it.op ? '_t' : '')}" placeholder="${esc(it.h || (it.op ? 'Observações' : 'Resposta'))}" oninput="anTexto(this)">${esc(it.op ? (t || '') : (v || ''))}</textarea>` : '';
-      return `<div class="an-item ${it.risco ? 'risco' : ''} ${fora ? 'fora' : ''}"><label>${esc(it.q)}${fora ? ` <span class="tag">a partir de ${it.min} anos</span>` : ''}</label>${it.h && !it.op && !it.t ? `<small class="meta">${esc(it.h)}</small>` : ''}${ops}${campo}</div>`;
+        : (!it.op || it.t) ? `<textarea rows="1" data-a="${it.id + (it.op ? '_t' : '')}" placeholder="${esc(it.h || (it.op ? 'Observação (opcional)' : 'Resposta'))}" class="${it.op ? 'an-obs' : ''}" oninput="anTexto(this)">${esc(it.op ? (t || '') : (v || ''))}</textarea>` : '';
+      return `<div class="an-item ${it.risco ? 'risco' : ''} ${fora ? 'fora' : ''}"><label>${esc(it.q)}${it.m ? ' <span class="an-varias">pode marcar mais de uma</span>' : ''}${fora ? ` <span class="tag">a partir de ${it.min} anos</span>` : ''}</label>${it.h && !it.op && !it.t ? `<small class="meta">${esc(it.h)}</small>` : ''}${ops}${campo}</div>`;
     };
     pane(topo + `<div class="an-barra"><button onclick="anTodas(true)">Abrir todas</button><button onclick="anTodas(false)">Fechar todas</button><span class="meta">Salva sozinho enquanto você digita.</span><button class="pri" onclick="anPDF()">${IC.printer || ''}<span>Gerar PDF</span></button></div>
       <div id="anForm" data-m="${m}">${f.secoes.map((s, si) => `<details class="card an-sec ${s.risco ? 'risco' : ''}" ${si === 0 || (S.anAberta || []).includes(m + si) ? 'open' : ''} ontoggle="anMarca('${m + si}',this.open)">
@@ -333,7 +345,7 @@
       const itens = s.itens.map(it => {
         const v = r[it.id], t = r[it.id + '_t'];
         const val = [Array.isArray(v) ? v.join(', ') : (it.tipo === 'date' && v ? fmtD(v) : v), t].filter(x => !vazio(x)).join(' — ');
-        return (val || todas) ? [it.q, val || ''] : null;
+        return (val || todas) ? [it.q, val || '', it] : null;
       }).filter(Boolean);
       if (itens.length) out.push({ t: s.t, itens });
     });
@@ -354,7 +366,7 @@
       const todas = (document.querySelector('input[name=anPdfM]:checked') || {}).value === 't'; closeModal();
       const f = FICHAS[p.anamnese.modelo], secs = linhas(p, todas);
       const txt = [`Paciente: ${p.ident.nome || '—'}${idadeAnam(p) !== null ? ` · ${idadeAnam(p)} anos` : ''}`, `Profissional: ${DB.prof.nome || ''} · CRP ${DB.prof.crp || ''}`];
-      secs.forEach(s => { txt.push('## ' + s.t.toUpperCase()); s.itens.forEach(([q, v]) => txt.push(`${q}${/[?:]$/.test(q) ? '' : ':'} ${v || '______________________________'}`)); });
+      secs.forEach(s => { txt.push('## ' + s.t.toUpperCase()); s.itens.forEach(([q, v, it]) => txt.push(`${q}${/[?:]$/.test(q) ? '' : ':'} ${v || (it && it.op ? it.op.map(o => '( ) ' + o).join('  ') + '  Obs.: ________' : '______________________________')}`)); });
       try {
         const blob = buildPDF({ kind: 'anamnese', prof: DB.prof, titulo: f.titulo.replace(/^Ficha de /, '').toUpperCase().replace('—', '-'), texto: txt.join('\n'), cidade: DB.prof.cidade || '', data: today() });
         await deliverPDF(blob, `Anamnese - ${(p.ident.nome || 'paciente').replace(/[^\wÀ-ÿ ]+/g, '')}.pdf`);

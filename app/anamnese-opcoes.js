@@ -1,0 +1,366 @@
+/* Opções de múltipla escolha das fichas de anamnese do Appsico.
+   Cada pergunta das fichas (adultos e infantojuvenil) recebe opções para o psicólogo marcar,
+   e continua com um campo curto de observação embaixo (opcional).
+   Formato: 'Pergunta exata': [opções] ou { op: [opções], m: 1 } (m = pode marcar várias).
+   Perguntas que são só dados de cadastro (nome, telefone, endereço...) continuam como texto. */
+(function () {
+  const SN = ['Sim', 'Não'];
+  const SNP = ['Sim', 'Não', 'Parcialmente'];
+  const SNAV = ['Sim', 'Não', 'Às vezes'];
+  const SNNI = ['Sim', 'Não', 'Não sabe informar'];
+  const HIST = ['Não', 'Sim, no passado', 'Sim, atualmente'];
+  const FREQ = ['Nunca', 'Raramente', 'Às vezes', 'Frequentemente', 'Sempre'];
+  const QUAL = ['Muito boa', 'Boa', 'Regular', 'Ruim', 'Muito ruim'];
+  const FACIL = ['Com facilidade', 'Com alguma dificuldade', 'Com muita dificuldade'];
+  const TEMPO = ['Menos de 1 mês', '1 a 6 meses', '6 meses a 1 ano', '1 a 5 anos', 'Mais de 5 anos', 'Desde a infância'];
+  const REL = ['Harmonioso', 'Com conflitos pontuais', 'Conflituoso', 'Distante', 'Rompido', 'Não se aplica'];
+  const VIV = ['Positiva', 'Sem fatos marcantes', 'Com dificuldades', 'Traumática', 'Não relatou'];
+  const NIVEL = ['Alta', 'Adequada', 'Baixa', 'Muito baixa'];
+  const SAT = ['Muito satisfeito(a)', 'Satisfeito(a)', 'Pouco satisfeito(a)', 'Insatisfeito(a)'];
+  const RISCO = ['Ausente', 'Baixo', 'Moderado', 'Alto'];
+  const EXAME = ['Preservado(a)', 'Levemente alterado(a)', 'Alterado(a)', 'Não avaliado(a)'];
+  const FUNC = ['Independente', 'Precisa de pouca ajuda', 'Precisa de muita ajuda', 'Dependente', 'Não se aplica'];
+  const INTENS = ['Ausente', 'Leve', 'Moderado', 'Intenso'];
+  const ADEQ = ['Adequado para a idade', 'Com atraso leve', 'Com atraso importante', 'Não sabe informar'];
+  const ESCOLA = ['Não alfabetizado', 'Fundamental incompleto', 'Fundamental completo', 'Médio incompleto', 'Médio completo', 'Superior incompleto', 'Superior completo', 'Pós-graduação'];
+  const CIVIL = ['Solteiro(a)', 'Casado(a)', 'União estável', 'Separado(a)/Divorciado(a)', 'Viúvo(a)'];
+  const PARENT = ['Mãe', 'Pai', 'Avó/Avô', 'Tio(a)', 'Irmão(ã)', 'Madrasta/Padrasto', 'Responsável legal', 'Outro'];
+  const M = (...op) => ({ op, m: 1 });
+
+  const MAPA = {
+    /* ---------------- ADULTOS ---------------- */
+    // 1. Dados pessoais
+    'Nome social (se aplicável)': ['Não utiliza', 'Utiliza (anotar abaixo)'],
+    'Sexo atribuído ao nascimento (quando clinicamente pertinente)': ['Feminino', 'Masculino', 'Intersexo', 'Prefere não informar'],
+    'Identidade de gênero': ['Mulher cisgênero', 'Homem cisgênero', 'Mulher trans', 'Homem trans', 'Não binário', 'Outra', 'Prefere não informar'],
+    'Orientação sexual (opcional)': ['Heterossexual', 'Homossexual', 'Bissexual', 'Assexual', 'Outra', 'Prefere não informar'],
+    'Estado civil': CIVIL,
+    'Naturalidade': ['Mesma cidade onde reside', 'Outra cidade do estado', 'Outro estado', 'Outro país'],
+    'Nacionalidade': ['Brasileira', 'Estrangeira', 'Dupla nacionalidade'],
+    'Pessoa de referência para contato em situações de emergência': ['Informou (anotar nome abaixo)', 'Não possui', 'Preferiu não informar'],
+    'Grau de parentesco': ['Cônjuge/companheiro(a)', 'Mãe/Pai', 'Filho(a)', 'Irmão(ã)', 'Outro familiar', 'Amigo(a)', 'Outro'],
+    'Telefone de emergência': ['Informado (anotar abaixo)', 'Não informado'],
+    'Com quem reside atualmente?': M('Sozinho(a)', 'Cônjuge/companheiro(a)', 'Filhos', 'Pais', 'Irmãos', 'Outros familiares', 'Amigos', 'Instituição/abrigo'),
+    'Possui filhos? Quantos? Idades?': ['Não', 'Sim, 1', 'Sim, 2', 'Sim, 3 ou mais'],
+    'Possui alguma responsabilidade de cuidado por terceiros?': M('Não', 'Filhos pequenos', 'Pais idosos', 'Pessoa com deficiência ou doença', 'Outro'),
+    // 2. Motivo da procura
+    'O que o levou a procurar atendimento psicológico neste momento?': M('Ansiedade', 'Tristeza/depressão', 'Estresse', 'Problemas de relacionamento', 'Questões familiares', 'Luto ou perda', 'Trabalho/carreira', 'Autoestima', 'Trauma', 'Encaminhamento de outro profissional', 'Autoconhecimento', 'Outro'),
+    'Qual é a principal dificuldade ou situação que deseja trabalhar?': M('Emoções (ansiedade, tristeza, raiva)', 'Relacionamentos afetivos', 'Família', 'Trabalho/estudos', 'Autoestima/autoconfiança', 'Comportamentos/hábitos', 'Luto/perdas', 'Experiências traumáticas', 'Sono', 'Outro'),
+    'Quando percebeu o início dessa dificuldade?': TEMPO,
+    'O que estava acontecendo em sua vida quando ela começou?': M('Nada específico', 'Perda ou luto', 'Separação/término', 'Mudança de casa/cidade', 'Problema no trabalho', 'Problema de saúde', 'Problema financeiro', 'Conflito familiar', 'Violência/trauma', 'Outro'),
+    'A situação acontece continuamente ou em determinados momentos?': ['Continuamente', 'Em episódios', 'Em situações específicas', 'Não sabe dizer'],
+    'Quais são os fatores que parecem agravar ou aliviar o problema?': M('Piora com estresse', 'Piora com conflitos', 'Piora à noite', 'Piora no trabalho', 'Melhora com apoio de pessoas', 'Melhora com atividade física', 'Melhora com descanso/lazer', 'Não identifica'),
+    'Já buscou ajuda anteriormente?': M('Não', 'Psicólogo', 'Psiquiatra', 'Outro médico', 'Grupo de apoio', 'Religião/espiritualidade', 'Outro'),
+    'O que espera alcançar com a psicoterapia?': M('Aliviar sintomas', 'Compreender a si mesmo', 'Melhorar relacionamentos', 'Tomar uma decisão', 'Mudar comportamentos', 'Lidar com uma perda', 'Melhorar a autoestima', 'Não sabe ainda'),
+    'Como acredita que a terapia poderá ajudá-lo?': M('Escuta e acolhimento', 'Orientação prática', 'Autoconhecimento', 'Mudança de comportamentos', 'Ainda não sabe'),
+    'Existe alguma situação urgente que precisa ser abordada inicialmente?': ['Não', 'Sim (descrever abaixo)', 'Risco à integridade (avaliar já)'],
+    // 3. Histórico pessoal e familiar
+    'Como descreveria sua infância?': ['Feliz', 'Tranquila', 'Com dificuldades', 'Difícil', 'Traumática', 'Não lembra bem'],
+    'Como era o relacionamento com seus pais ou cuidadores?': REL,
+    'Como era a dinâmica familiar?': M('Acolhedora', 'Rígida', 'Permissiva', 'Conflituosa', 'Distante', 'Instável', 'Com violência'),
+    'Havia demonstrações de afeto, diálogo e apoio?': ['Frequentemente', 'Às vezes', 'Raramente', 'Nunca'],
+    'Como eram estabelecidos os limites e as regras?': ['Com diálogo e coerência', 'De forma rígida/autoritária', 'De forma permissiva', 'De forma inconsistente', 'Com punições físicas', 'Não havia regras claras'],
+    'Houve separações, perdas, abandonos ou mudanças significativas?': M('Não', 'Separação dos pais', 'Morte de familiar', 'Abandono', 'Mudanças frequentes', 'Afastamento de cuidadores', 'Outro'),
+    'Como é atualmente o relacionamento com os familiares?': REL,
+    'Existem conflitos familiares recorrentes?': ['Não', 'Às vezes', 'Frequentemente'],
+    'Como percebe a influência da sua história familiar na pessoa que é hoje?': ['Muito positiva', 'Positiva', 'Mista', 'Negativa', 'Não refletiu sobre isso'],
+    // 4. Desenvolvimento — todas as etapas usam VIV (definido abaixo por padrão)
+    // 5. Saúde física
+    'Como considera sua saúde física atualmente?': QUAL,
+    'Possui alguma doença diagnosticada?': M('Não', 'Hipertensão', 'Diabetes', 'Doença cardíaca', 'Doença respiratória', 'Doença da tireoide', 'Doença autoimune', 'Dor crônica', 'Doença neurológica', 'Outra'),
+    'Realiza acompanhamento médico?': ['Sim, regularmente', 'Sim, eventualmente', 'Não'],
+    'Faz uso de medicamentos? Quais, doses e horários?': ['Não', 'Sim (anotar quais, doses e horários)'],
+    'Já passou por cirurgias ou internações?': M('Não', 'Cirurgia', 'Internação clínica', 'Internação psiquiátrica'),
+    'Possui alergias?': ['Não', 'Sim (anotar)', 'Não sabe'],
+    'Como está sua qualidade do sono?': M('Boa', 'Dificuldade para pegar no sono', 'Acorda durante a noite', 'Acorda muito cedo', 'Dorme demais', 'Pesadelos', 'Não se sente descansado(a)'),
+    'Como é sua alimentação?': M('Equilibrada', 'Irregular', 'Come pouco/perdeu apetite', 'Come em excesso', 'Compulsão alimentar', 'Restrição alimentar'),
+    'Pratica atividade física? Qual frequência?': ['Não pratica', '1 a 2 vezes por semana', '3 a 4 vezes por semana', '5 ou mais vezes por semana'],
+    'Apresenta dores ou sintomas físicos recorrentes?': M('Não', 'Dor de cabeça', 'Problemas gastrointestinais', 'Dores musculares', 'Taquicardia/falta de ar', 'Tonturas', 'Outro'),
+    'Possui alterações hormonais ou metabólicas relevantes?': ['Não', 'Sim (anotar)', 'Não sabe'],
+    'Como avalia sua disposição física e energia diária?': NIVEL,
+    'Possui alguma condição de saúde que interfira em sua rotina?': ['Não', 'Sim, um pouco', 'Sim, muito'],
+    // 6. Saúde mental
+    'Já realizou psicoterapia anteriormente?': ['Não', 'Sim, uma vez', 'Sim, mais de uma vez'],
+    'Quando e por quanto tempo?': ['Não se aplica', 'Menos de 6 meses', '6 meses a 1 ano', '1 a 3 anos', 'Mais de 3 anos'],
+    'Qual foi o motivo do acompanhamento?': M('Não se aplica', 'Ansiedade', 'Depressão', 'Luto', 'Relacionamentos', 'Família', 'Trabalho', 'Trauma', 'Outro'),
+    'Já recebeu diagnóstico psicológico ou psiquiátrico?': M('Não', 'Ansiedade', 'Depressão', 'Transtorno bipolar', 'TDAH', 'TEA', 'TOC', 'Estresse pós-traumático', 'Transtorno alimentar', 'Transtorno de personalidade', 'Outro'),
+    'Já realizou acompanhamento psiquiátrico?': HIST,
+    'Faz ou já fez uso de medicação psicotrópica?': HIST,
+    'Já teve crises de ansiedade ou pânico?': HIST,
+    'Apresenta tristeza persistente ou perda de interesse?': HIST,
+    'Tem dificuldades de concentração ou memória?': INTENS,
+    'Apresenta pensamentos recorrentes ou intrusivos?': INTENS,
+    'Tem dificuldade para controlar impulsos?': INTENS,
+    'Apresenta alterações significativas de humor?': INTENS,
+    'Como costuma reagir diante de situações de estresse?': M('Enfrenta com calma', 'Fica ansioso(a)', 'Fica irritado(a)', 'Paralisa', 'Evita/foge', 'Chora', 'Busca apoio', 'Usa álcool/substâncias'),
+    'Já vivenciou situações traumáticas?': M('Não', 'Violência física', 'Violência psicológica', 'Violência sexual', 'Acidente grave', 'Perda traumática', 'Assalto/violência urbana', 'Outro'),
+    'Já apresentou comportamento de automutilação?': HIST,
+    'Já teve pensamentos de morte ou suicídio?': HIST,
+    'Já realizou alguma tentativa de suicídio?': ['Não', 'Sim, uma vez', 'Sim, mais de uma vez'],
+    // Avaliação de risco
+    'Ideação suicida atual ou recente': ['Ausente', 'Passiva (desejo de morrer)', 'Ativa, sem plano', 'Ativa, com plano'],
+    'Existência de planejamento, intenção e acesso a meios': M('Sem planejamento', 'Com planejamento', 'Com intenção', 'Com acesso a meios'),
+    'Histórico de tentativas anteriores': ['Nenhuma', '1 tentativa', '2 ou mais tentativas'],
+    'Comportamentos autolesivos': HIST,
+    'Risco de violência contra terceiros': RISCO,
+    'Fatores de proteção e rede de apoio': M('Família', 'Amigos', 'Parceiro(a)', 'Filhos', 'Religião/espiritualidade', 'Trabalho/estudos', 'Animais de estimação', 'Projetos de vida', 'Nenhum identificado'),
+    // 7. Aspectos emocionais
+    'Como costuma expressar suas emoções?': M('Com facilidade', 'Guarda para si', 'Por meio de choro', 'Com irritação/raiva', 'Por meio do corpo (sintomas)', 'Por escrito/arte'),
+    'Tem facilidade para identificar o que sente?': ['Sim', 'Às vezes', 'Não'],
+    'Como lida com frustrações?': FACIL,
+    'Como reage a críticas?': ['Aceita bem', 'Fica magoado(a)', 'Fica irritado(a)', 'Se defende/rebate', 'Se cala'],
+    'Consegue lidar com mudanças inesperadas?': FACIL,
+    'Apresenta dificuldade para tomar decisões?': ['Não', 'Às vezes', 'Frequentemente'],
+    'Costuma antecipar problemas ou imaginar cenários negativos?': FREQ,
+    'Como está sua autoestima?': NIVEL,
+    'Como percebe sua autoconfiança?': NIVEL,
+    'Consegue estabelecer limites?': ['Sim', 'Às vezes', 'Não'],
+    'Tem dificuldade para dizer não?': ['Não', 'Às vezes', 'Frequentemente'],
+    'Como administra conflitos?': ['Dialoga', 'Evita', 'Cede', 'Confronta', 'Fica agressivo(a)'],
+    'Costuma agir por impulso?': FREQ,
+    'Como avalia sua capacidade de organização?': ['Boa', 'Regular', 'Ruim'],
+    'Apresenta dificuldades de atenção, concentração ou planejamento?': INTENS,
+    // 8. Relacionamentos afetivos
+    'Está atualmente em um relacionamento?': ['Não', 'Sim, namoro', 'Sim, casamento/união estável', 'Sim, relação sem compromisso'],
+    'Como descreveria sua relação afetiva?': ['Não se aplica', 'Saudável e satisfatória', 'Estável com conflitos pontuais', 'Conflituosa', 'Desgastada', 'Abusiva'],
+    'Como é a comunicação com o parceiro ou parceira?': ['Não se aplica', 'Boa', 'Regular', 'Difícil', 'Inexistente'],
+    'Existem conflitos recorrentes?': ['Não', 'Às vezes', 'Frequentemente', 'Não se aplica'],
+    'Como lida com ciúmes, confiança e insegurança?': ['Bem', 'Com alguma dificuldade', 'Com muita dificuldade', 'Não se aplica'],
+    'Como costuma demonstrar afeto?': M('Palavras', 'Contato físico', 'Atitudes/cuidados', 'Presentes', 'Tempo junto', 'Tem dificuldade'),
+    'Como percebe sua vida sexual?': ['Satisfatória', 'Pouco satisfatória', 'Insatisfatória', 'Ausente', 'Prefere não falar'],
+    'Está satisfeito(a) com sua vida afetiva e sexual?': SAT,
+    'Existem dificuldades relacionadas à intimidade?': ['Não', 'Sim, algumas', 'Sim, muitas', 'Prefere não falar'],
+    'Já vivenciou relacionamentos abusivos ou situações de violência?': M('Não', 'Violência psicológica', 'Violência física', 'Violência sexual', 'Violência patrimonial', 'Prefere não falar'),
+    'Como percebe seus padrões de relacionamento?': M('Saudáveis', 'Repetitivos', 'Dependência emocional', 'Evita se envolver', 'Escolhas que o(a) fazem sofrer', 'Não refletiu sobre isso'),
+    // 9. Contexto social
+    'Possui amigos próximos?': ['Não', 'Sim, poucos', 'Sim, vários'],
+    'Com que frequência mantém contato com amigos?': ['Diariamente', 'Semanalmente', 'Mensalmente', 'Raramente', 'Nunca'],
+    'Participa de grupos sociais?': SN,
+    'Participa de atividades culturais, esportivas ou comunitárias?': M('Não', 'Culturais', 'Esportivas', 'Comunitárias', 'Religiosas', 'Voluntariado'),
+    'Possui rede de apoio emocional?': ['Sim, sólida', 'Sim, mas limitada', 'Não'],
+    'Sente-se pertencente aos ambientes que frequenta?': ['Sim', 'Às vezes', 'Não'],
+    'Como é sua relação com a comunidade?': ['Boa', 'Regular', 'Distante', 'Conflituosa'],
+    'Costuma se isolar socialmente?': FREQ,
+    'Como utiliza redes sociais e meios digitais?': ['Uso equilibrado', 'Uso excessivo', 'Uso que causa prejuízo', 'Pouco uso', 'Não usa'],
+    'Existem situações de discriminação, preconceito ou exclusão em sua vida?': M('Não', 'Racial', 'Gênero', 'Orientação sexual', 'Religião', 'Classe social', 'Deficiência', 'Idade', 'Aparência', 'Outra'),
+    'Como avalia sua satisfação com a vida social?': SAT,
+    // 10. Escolaridade
+    'Curso ou formação': ESCOLA,
+    'Instituição': ['Pública', 'Privada', 'Ensino a distância'],
+    'Possui cursos complementares?': SN,
+    'Tem interesse em continuar estudando?': ['Sim', 'Não', 'Talvez'],
+    'Como foi seu desempenho escolar?': ['Ótimo', 'Bom', 'Regular', 'Com dificuldades'],
+    'Apresentou dificuldades de aprendizagem?': ['Não', 'Sim, leves', 'Sim, importantes'],
+    'Teve dificuldades de atenção, leitura, escrita ou matemática?': M('Não', 'Atenção', 'Leitura', 'Escrita', 'Matemática'),
+    'Como era sua relação com professores e colegas?': ['Boa', 'Regular', 'Difícil', 'Sofreu bullying'],
+    'Houve interrupções ou abandono escolar?': ['Não', 'Interrupção', 'Abandono', 'Reprovação'],
+    'Possui planos de desenvolvimento acadêmico ou profissional?': ['Sim, definidos', 'Sim, ainda vagos', 'Não'],
+    // 11. Vida profissional
+    'Qual é sua função atual?': ['Empregado(a) CLT', 'Servidor(a) público(a)', 'Autônomo(a)/empresário(a)', 'Estudante', 'Desempregado(a)', 'Aposentado(a)', 'Do lar', 'Afastado(a)/licença'],
+    'Há quanto tempo trabalha na área?': ['Menos de 1 ano', '1 a 3 anos', '3 a 10 anos', 'Mais de 10 anos', 'Não se aplica'],
+    'Qual é sua jornada de trabalho?': ['Até 20 h semanais', '20 a 40 h semanais', '40 a 44 h semanais', 'Mais de 44 h semanais', 'Turnos/escala', 'Não se aplica'],
+    'Como avalia sua satisfação profissional?': SAT,
+    'Como é seu relacionamento com colegas e gestores?': ['Bom', 'Regular', 'Difícil', 'Conflituoso', 'Não se aplica'],
+    'Sente-se valorizado profissionalmente?': ['Sim', 'Às vezes', 'Não', 'Não se aplica'],
+    'Possui dificuldades relacionadas à produtividade?': ['Não', 'Às vezes', 'Frequentemente'],
+    'Apresenta sintomas de estresse ou esgotamento profissional?': INTENS,
+    'Já vivenciou desemprego ou instabilidade profissional?': HIST,
+    'Quais são seus objetivos de carreira?': M('Crescer na empresa atual', 'Mudar de área', 'Empreender', 'Estudar/se qualificar', 'Estabilidade', 'Aposentar-se', 'Ainda não sabe'),
+    'Como equilibra trabalho e vida pessoal?': ['Bem', 'Com alguma dificuldade', 'Com muita dificuldade'],
+    // 12. Situação financeira
+    'Como avalia sua situação financeira atual?': ['Confortável', 'Estável', 'Apertada', 'Difícil', 'Crítica'],
+    'Possui renda própria?': SN,
+    'Qual é a principal fonte de renda?': ['Salário', 'Trabalho autônomo', 'Aposentadoria/pensão', 'Benefício social', 'Ajuda de familiares', 'Outra'],
+    'Contribui financeiramente com familiares?': SN,
+    'Possui dependentes financeiros?': ['Não', '1', '2', '3 ou mais'],
+    'Como organiza suas despesas?': ['Planilha/aplicativo', 'Anotações', 'De cabeça', 'Não organiza', 'Outra pessoa organiza'],
+    'Consegue manter suas necessidades básicas?': ['Sim', 'Com dificuldade', 'Não'],
+    'Possui dívidas ou compromissos financeiros?': ['Não', 'Sim, sob controle', 'Sim, preocupantes'],
+    'Tem dificuldades para controlar gastos?': ['Não', 'Às vezes', 'Frequentemente'],
+    'Consegue poupar ou realizar investimentos?': ['Sim, regularmente', 'Às vezes', 'Não'],
+    'Possui planejamento financeiro?': SNP,
+    'A situação financeira provoca ansiedade ou sofrimento?': INTENS,
+    'Já vivenciou períodos de desemprego ou vulnerabilidade econômica?': HIST,
+    'Quais são suas principais preocupações financeiras?': M('Dívidas', 'Pagar contas básicas', 'Desemprego', 'Sustento da família', 'Moradia', 'Aposentadoria', 'Nenhuma'),
+    'Como a condição financeira interfere em seus projetos de vida?': ['Não interfere', 'Interfere pouco', 'Interfere bastante', 'Impede os projetos'],
+    'Dados complementares — renda mensal aproximada': ['Até 1 salário mínimo', '1 a 3 salários', '3 a 5 salários', '5 a 10 salários', 'Mais de 10 salários', 'Prefere não informar'],
+    'Dados complementares — despesas fixas': ['Menores que a renda', 'Iguais à renda', 'Maiores que a renda'],
+    'Dados complementares — dependência financeira': ['Independente', 'Parcialmente dependente', 'Totalmente dependente'],
+    'Dados complementares — reserva financeira': ['Possui', 'Possui pouca', 'Não possui'],
+    'Dados complementares — comprometimentos financeiros relevantes': M('Nenhum', 'Financiamento', 'Empréstimo', 'Cartão de crédito', 'Pensão', 'Outro'),
+    // 13. Hábitos e rotina
+    'Como é sua rotina diária?': ['Organizada', 'Irregular', 'Sobrecarregada', 'Ociosa'],
+    'Qual horário costuma acordar e dormir?': ['Horários regulares', 'Horários irregulares', 'Dorme tarde e acorda tarde', 'Trabalha em turnos/noite'],
+    'Como organiza suas atividades?': ['Agenda/planejamento', 'Lista de tarefas', 'De cabeça', 'Não organiza'],
+    'Tem momentos de lazer?': ['Frequentemente', 'Às vezes', 'Raramente', 'Nunca'],
+    'Quais são seus hobbies e interesses?': M('Leitura', 'Música', 'Esportes', 'Filmes/séries', 'Jogos', 'Arte/artesanato', 'Natureza/passeios', 'Culinária', 'Religião', 'Nenhum no momento'),
+    'Consome bebidas alcoólicas?': ['Não', 'Socialmente', 'Semanalmente', 'Diariamente', 'Já teve problemas com álcool'],
+    'Faz uso de tabaco ou nicotina?': ['Não', 'Sim, cigarro', 'Sim, cigarro eletrônico/vape', 'Ex-fumante'],
+    'Faz uso de substâncias psicoativas?': M('Não', 'Maconha', 'Cocaína', 'Ansiolíticos sem prescrição', 'Outras', 'Prefere não informar'),
+    'Com que frequência?': ['Não se aplica', 'Raramente', 'Mensalmente', 'Semanalmente', 'Diariamente'],
+    'Como utiliza a internet e dispositivos eletrônicos?': ['Uso equilibrado', 'Uso excessivo', 'Uso que causa prejuízo', 'Pouco uso'],
+    'Tem dificuldade para equilibrar obrigações e descanso?': ['Não', 'Às vezes', 'Frequentemente'],
+    'Como avalia a qualidade geral de sua rotina?': QUAL,
+    // 14. Espiritualidade
+    'Possui alguma crença religiosa ou espiritual?': ['Católica', 'Evangélica', 'Espírita', 'Religiões de matriz africana', 'Outra religião', 'Espiritualidade sem religião', 'Não possui', 'Prefere não informar'],
+    'Participa de alguma comunidade religiosa?': ['Sim, frequentemente', 'Às vezes', 'Não'],
+    'Quais valores considera fundamentais em sua vida?': M('Família', 'Honestidade', 'Fé', 'Trabalho', 'Liberdade', 'Respeito', 'Amizade', 'Saúde', 'Justiça', 'Conhecimento'),
+    'O que considera importante para sua existência?': M('Família', 'Relacionamentos', 'Fé', 'Trabalho/carreira', 'Saúde', 'Realização pessoal', 'Ajudar os outros', 'Segurança financeira'),
+    'Quais princípios orientam suas decisões?': M('Valores familiares', 'Fé/religião', 'Razão/lógica', 'Intuição', 'Opinião de outras pessoas', 'Ética pessoal'),
+    'A espiritualidade ou as crenças funcionam como fonte de apoio?': ['Sim, muito', 'Sim, um pouco', 'Não', 'Não se aplica'],
+    'Existem conflitos entre seus valores pessoais e seu contexto de vida?': ['Não', 'Às vezes', 'Sim, importantes'],
+    // 15. Autonomia — áreas usam FUNC
+    'Autocuidado': FUNC, 'Vida doméstica': FUNC, 'Autonomia financeira': FUNC, 'Mobilidade': FUNC, 'Trabalho': FUNC, 'Socialização': FUNC,
+    'Tomada de decisão': FUNC, 'Organização': FUNC, 'Autonomia emocional': FUNC, 'Responsabilidades': FUNC,
+    'Consegue realizar suas atividades diárias de forma independente?': ['Sim', 'Parcialmente', 'Não'],
+    'Precisa de ajuda para alguma atividade?': ['Não', 'Sim, algumas', 'Sim, muitas'],
+    'Consegue administrar seus compromissos?': ['Sim', 'Com dificuldade', 'Não'],
+    'Como lida com imprevistos?': FACIL,
+    'Sente que possui controle sobre suas próprias decisões?': ['Sim', 'Parcialmente', 'Não'],
+    'Quais áreas da vida apresentam maior dificuldade atualmente?': M('Emocional', 'Familiar', 'Afetiva', 'Profissional', 'Financeira', 'Social', 'Saúde', 'Estudos'),
+    // 16. Recursos pessoais
+    'Quais considera suas principais qualidades?': M('Determinação', 'Empatia', 'Responsabilidade', 'Criatividade', 'Honestidade', 'Bom humor', 'Paciência', 'Inteligência', 'Generosidade', 'Não soube dizer'),
+    'Quais são suas maiores habilidades?': M('Comunicação', 'Organização', 'Resolver problemas', 'Cuidar de pessoas', 'Habilidades manuais', 'Artes', 'Liderança', 'Aprender rápido', 'Não soube dizer'),
+    'O que costuma fazer bem?': M('Trabalho', 'Cuidar da família', 'Estudar', 'Esportes', 'Artes', 'Ajudar os outros', 'Não soube dizer'),
+    'Quais situações da vida conseguiu superar?': M('Perdas/luto', 'Doença', 'Separação', 'Dificuldades financeiras', 'Desemprego', 'Violência', 'Mudanças', 'Outras'),
+    'O que lhe proporciona satisfação?': M('Família', 'Amigos', 'Trabalho', 'Lazer', 'Fé', 'Conquistas pessoais', 'Ajudar os outros'),
+    'Quais pessoas considera importantes em sua vida?': M('Parceiro(a)', 'Filhos', 'Mãe', 'Pai', 'Irmãos', 'Amigos', 'Outros familiares', 'Colegas'),
+    'Quais atividades promovem bem-estar?': M('Exercício físico', 'Música', 'Leitura', 'Natureza', 'Encontrar pessoas', 'Oração/meditação', 'Hobbies', 'Descanso'),
+    'O que lhe ajuda a enfrentar momentos difíceis?': M('Família', 'Amigos', 'Fé', 'Terapia', 'Atividade física', 'Trabalho', 'Ficar sozinho(a)', 'Nada ajuda no momento'),
+    'Quais são suas principais conquistas?': M('Formação', 'Carreira', 'Família', 'Casa própria', 'Superações pessoais', 'Outras'),
+    'O que gostaria de desenvolver em si mesmo?': M('Autoconfiança', 'Controle emocional', 'Comunicação', 'Organização', 'Paciência', 'Assertividade', 'Autocuidado'),
+    // 17. Expectativas
+    'Quais aspectos da vida gostaria de transformar?': M('Emocional', 'Relacionamentos', 'Família', 'Trabalho', 'Saúde', 'Hábitos', 'Autoestima'),
+    'Que comportamentos gostaria de compreender ou modificar?': M('Evitação', 'Impulsividade', 'Procrastinação', 'Agressividade', 'Dependência emocional', 'Uso de substâncias', 'Isolamento', 'Outro'),
+    'Quais emoções gostaria de aprender a administrar melhor?': M('Ansiedade', 'Tristeza', 'Raiva', 'Medo', 'Culpa', 'Vergonha', 'Ciúmes', 'Frustração'),
+    'Quais dificuldades considera prioritárias?': M('Emocionais', 'Familiares', 'Afetivas', 'Profissionais', 'Financeiras', 'Sociais', 'De saúde'),
+    'Como perceberá que está evoluindo no processo terapêutico?': M('Menos sintomas', 'Mais bem-estar', 'Melhores relações', 'Mais autonomia', 'Decisões mais claras', 'Não sabe dizer'),
+    'O que espera do profissional que irá acompanhá-lo?': M('Escuta sem julgamentos', 'Orientações práticas', 'Sigilo', 'Disponibilidade', 'Confronto/desafio', 'Acolhimento'),
+    'Está disposto(a) a participar ativamente do processo terapêutico?': ['Sim', 'Com algumas reservas', 'Não sabe ainda', 'Não'],
+    // 18. Observações clínicas (exame do estado mental)
+    'Apresentação pessoal e autocuidado': ['Adequada', 'Descuidada', 'Excessivamente cuidada', 'Bizarra'],
+    'Atitude durante a entrevista': M('Colaborativa', 'Desconfiada', 'Resistente', 'Hostil', 'Sedutora', 'Indiferente', 'Ansiosa'),
+    'Contato visual': ['Adequado', 'Evitativo', 'Fixo/intenso', 'Ausente'],
+    'Comunicação verbal': M('Adequada', 'Prolixa', 'Lacônica', 'Acelerada', 'Lentificada', 'Volume baixo', 'Volume alto'),
+    'Coerência e organização do discurso': ['Coerente e organizado', 'Pouco organizado', 'Desorganizado', 'Incoerente'],
+    'Orientação temporal e espacial': ['Orientado(a)', 'Parcialmente desorientado(a)', 'Desorientado(a)'],
+    'Atenção e concentração': EXAME, 'Memória': EXAME, 'Juízo crítico': EXAME,
+    'Humor e afeto': M('Eutímico', 'Deprimido', 'Ansioso', 'Irritável', 'Eufórico', 'Embotado', 'Lábil', 'Incongruente'),
+    'Psicomotricidade': ['Normal', 'Agitação', 'Lentificação', 'Tiques/estereotipias'],
+    'Pensamento (curso, forma e conteúdo)': M('Sem alterações', 'Acelerado', 'Lentificado', 'Desorganizado', 'Ideias obsessivas', 'Ideias de culpa/ruína', 'Ideias delirantes'),
+    'Percepção': ['Sem alterações', 'Ilusões', 'Alucinações', 'Não avaliado'],
+    'Insight': ['Presente', 'Parcial', 'Ausente'],
+    'Capacidade de elaboração': ['Boa', 'Regular', 'Limitada'],
+    'Comportamentos observados': M('Adequados', 'Inquietação', 'Choro', 'Riso imotivado', 'Agressividade', 'Retraimento', 'Maneirismos'),
+    'Aspectos relevantes identificados': M('Risco à integridade', 'Sofrimento intenso', 'Uso de substâncias', 'Violência', 'Necessita encaminhamento', 'Nenhum de destaque'),
+    // 19. Síntese e formulação
+    'Demanda principal': M('Ansiedade', 'Humor/depressão', 'Relacionamentos', 'Família', 'Luto', 'Trauma', 'Trabalho/estresse', 'Autoestima', 'Comportamento', 'Outra'),
+    'Histórico e fatores associados': M('Familiares', 'Traumáticos', 'Biológicos/saúde', 'Sociais', 'Profissionais', 'Financeiros', 'Relacionais'),
+    'Fatores predisponentes': M('História familiar', 'Experiências na infância', 'Traços de personalidade', 'Condições de saúde', 'Contexto social'),
+    'Fatores precipitantes': M('Perda/luto', 'Separação', 'Conflito', 'Mudança', 'Problema de saúde', 'Problema profissional', 'Problema financeiro', 'Trauma'),
+    'Fatores mantenedores': M('Evitação', 'Pensamentos negativos', 'Falta de apoio', 'Conflitos persistentes', 'Estresse contínuo', 'Uso de substâncias', 'Isolamento'),
+    'Fatores de proteção': M('Rede de apoio', 'Vínculos familiares', 'Trabalho/estudos', 'Fé', 'Motivação para a terapia', 'Recursos pessoais', 'Projetos de vida'),
+    'Áreas de funcionamento preservadas': M('Pessoal', 'Familiar', 'Social', 'Profissional', 'Acadêmica', 'Afetiva', 'Autocuidado'),
+    'Áreas que necessitam de atenção': M('Pessoal', 'Familiar', 'Social', 'Profissional', 'Acadêmica', 'Afetiva', 'Autocuidado'),
+    'Hipóteses clínicas iniciais (quando pertinentes)': M('Ainda sem hipótese', 'Quadro ansioso', 'Quadro depressivo', 'Luto', 'Estresse/esgotamento', 'Trauma', 'Uso de substâncias', 'Neurodesenvolvimento', 'Outra'),
+    'Necessidade de avaliação complementar ou encaminhamento': M('Não', 'Psiquiatria', 'Neurologia', 'Clínico geral', 'Avaliação psicológica/neuropsicológica', 'Nutrição', 'Rede de proteção', 'Outro'),
+    'Plano terapêutico inicial': M('Psicoterapia individual semanal', 'Psicoterapia individual quinzenal', 'Avaliação psicológica', 'Sessões com familiares', 'Psicoeducação', 'Acompanhamento conjunto com psiquiatria', 'Reavaliar em 3 meses'),
+
+    /* ---------------- INFANTOJUVENIL ---------------- */
+    'Informante(s) e grau de parentesco': M(...PARENT),
+    'Nome social / como prefere ser chamado(a)': ['Pelo nome', 'Por apelido (anotar)', 'Por nome social (anotar)'],
+    'Identidade de gênero (se relatada)': ['Não relatada', 'Menina', 'Menino', 'Outra (anotar)'],
+    'Naturalidade / nacionalidade': ['Mesma cidade onde reside', 'Outra cidade do estado', 'Outro estado', 'Outro país'],
+    'Situação de guarda / quem autoriza o atendimento': ['Guarda dos pais juntos', 'Guarda compartilhada', 'Guarda unilateral da mãe', 'Guarda unilateral do pai', 'Guarda de avós/familiar', 'Acolhimento institucional', 'Outra'],
+    'Religião ou crenças que a família considera relevantes': ['Católica', 'Evangélica', 'Espírita', 'Religiões de matriz africana', 'Outra', 'Não possui', 'Não informou'],
+    'Etnia/raça autodeclarada (opcional)': ['Branca', 'Preta', 'Parda', 'Amarela', 'Indígena', 'Prefere não informar'],
+    'Responsável 1 — parentesco / vínculo com a criança': PARENT, 'Responsável 2 — parentesco / vínculo com a criança': PARENT,
+    'Responsável 1 — escolaridade': ESCOLA, 'Responsável 2 — escolaridade': ESCOLA,
+    'Responsável 1 — profissão / ocupação e carga horária': ['Trabalha meio período', 'Trabalha período integral', 'Trabalha em turnos/noite', 'Autônomo(a)', 'Desempregado(a)', 'Do lar', 'Aposentado(a)'],
+    'Responsável 2 — profissão / ocupação e carga horária': ['Trabalha meio período', 'Trabalha período integral', 'Trabalha em turnos/noite', 'Autônomo(a)', 'Desempregado(a)', 'Do lar', 'Aposentado(a)'],
+    'Responsável 1 — estado civil / situação conjugal': CIVIL, 'Responsável 2 — estado civil / situação conjugal': CIVIL,
+    'Responsável 2 — nome / idade': ['Não há segundo responsável', 'Informado (anotar abaixo)'],
+    'Responsável 2 — telefone / e-mail': ['Informado (anotar abaixo)', 'Não informado'],
+    'Irmãos e outros moradores da casa (nome, idade, parentesco)': M('Mãe', 'Pai', 'Irmãos', 'Meio-irmãos', 'Madrasta/padrasto', 'Avós', 'Tios/primos', 'Outros'),
+    'Responsável legal e financeiro pelo atendimento (nome, CPF, e-mail para recibos)': ['Responsável 1', 'Responsável 2', 'Ambos', 'Outra pessoa (anotar)'],
+    'Número de pessoas que dependem dessa renda': ['2', '3', '4', '5', '6 ou mais'],
+    'Dificuldades financeiras recentes que afetam a rotina ou o bem-estar da família': ['Não', 'Sim, leves', 'Sim, importantes'],
+    'Disponibilidade da família para frequência e custo do atendimento (periodicidade, valor, faltas)': ['Semanal', 'Quinzenal', 'Com dificuldade de frequência', 'Com dificuldade de custo'],
+    'Rede de apoio (familiares, vizinhos, comunidade, igreja, ONG)': M('Familiares', 'Vizinhos', 'Comunidade', 'Igreja', 'ONG/projeto social', 'Escola', 'Nenhuma'),
+    'Queixa principal (nas palavras dos responsáveis)': M('Comportamento/agressividade', 'Ansiedade/medos', 'Tristeza', 'Dificuldade escolar', 'Atenção/agitação', 'Fala/comunicação', 'Sono', 'Alimentação', 'Separação dos pais', 'Luto', 'Uso de telas', 'Outra'),
+    'Início, frequência, duração e evolução dos sintomas': ['Recente e piorando', 'Recente e estável', 'Antigo e piorando', 'Antigo e estável', 'Melhorando'],
+    'Situações em que ocorre (casa, escola, outros) e o que costuma desencadear': M('Em casa', 'Na escola', 'Com amigos', 'Em lugares públicos', 'Na casa de outro responsável', 'Em todos os lugares'),
+    'O que melhora e o que piora': M('Melhora com rotina', 'Melhora com atenção individual', 'Piora com conflitos', 'Piora com telas', 'Piora com cansaço', 'Não identificam'),
+    'O que a família já tentou fazer e com que resultado': M('Conversar', 'Castigos', 'Recompensas', 'Mudança de rotina', 'Ajuda da escola', 'Outro profissional', 'Nada ainda'),
+    'Impacto na vida da criança (sofrimento, escola, amizades, família)': INTENS,
+    'Como a criança/adolescente entende o motivo da consulta': ['Entende', 'Entende em parte', 'Não entende', 'Não foi conversado'],
+    'Expectativas da família com o processo terapêutico': M('Melhorar o comportamento', 'Diminuir sofrimento', 'Ajudar na escola', 'Orientação para os pais', 'Investigar diagnóstico', 'Outra'),
+    'Pontos fortes, interesses e o que a criança faz bem (a partir da percepção da família)': M('Carinhosa', 'Criativa', 'Inteligente', 'Esportes', 'Artes/música', 'Sociável', 'Responsável', 'Curiosa'),
+    'Peso/comprimento ao nascer, Apgar, complicações neonatais (UTI, icterícia, hipóxia)': M('Sem intercorrências', 'Prematuro(a)', 'Baixo peso', 'UTI neonatal', 'Icterícia', 'Hipóxia', 'Não sabe informar'),
+    'Amamentação e vínculo inicial com os cuidadores': ['Amamentação e vínculo sem dificuldades', 'Dificuldades na amamentação', 'Dificuldades no vínculo', 'Não sabe informar'],
+    'Doenças, alergias ou síndromes diagnosticadas': M('Nenhuma', 'Alergias', 'Asma/bronquite', 'Síndrome genética', 'Epilepsia', 'Outra'),
+    'Internações, cirurgias, traumatismos cranianos, convulsões, desmaios': M('Nenhum', 'Internação', 'Cirurgia', 'Traumatismo craniano', 'Convulsões', 'Desmaios'),
+    'Visão e audição (última avaliação, uso de óculos ou aparelho)': M('Sem alterações', 'Usa óculos', 'Usa aparelho auditivo', 'Nunca avaliou', 'Avaliação pendente'),
+    'Medicações em uso (nome, dose, horário, prescritor)': ['Não', 'Sim (anotar)'],
+    'Tratamentos psicológicos ou psiquiátricos anteriores (motivo, duração, motivo do término)': M('Nenhum', 'Psicoterapia', 'Psiquiatria', 'Neurologia', 'Fonoaudiologia', 'Terapia ocupacional', 'Psicopedagogia'),
+    'Histórico familiar de doenças clínicas relevantes': ['Não', 'Sim (anotar)', 'Não sabe informar'],
+    'Marcos motores: sustentou a cabeça, sentou, engatinhou, andou (idade em meses)': ADEQ,
+    'Coordenação motora fina e grossa (desenho, escrita, esportes, quedas frequentes)': ['Adequada', 'Dificuldade na motricidade fina', 'Dificuldade na motricidade grossa', 'Dificuldade em ambas'],
+    'Linguagem: balbucio, primeiras palavras, frases (idade); trocas na fala, gagueira, atraso': M('Adequada para a idade', 'Atraso na fala', 'Trocas na fala', 'Gagueira', 'Não sabe informar'),
+    'Comunicação e interação: contato visual, resposta ao nome, brincar simbólico, compreensão de ordens': ['Adequadas', 'Com algumas dificuldades', 'Com dificuldades importantes'],
+    'Interesses restritos, rotinas rígidas, movimentos repetitivos, sensibilidade a sons, texturas ou luz': M('Não observados', 'Interesses restritos', 'Rotinas rígidas', 'Movimentos repetitivos', 'Sensibilidade sensorial'),
+    'Controle esfincteriano: desfralde diurno e noturno (idade); enurese ou encoprese atual': M('Adequado para a idade', 'Desfralde tardio', 'Enurese atual', 'Encoprese atual'),
+    'Autonomia para a idade: vestir-se, higiene, alimentar-se, organizar pertences, tarefas domésticas': ['Adequada', 'Abaixo do esperado', 'Muito abaixo do esperado'],
+    'Atenção e atividade: dificuldade para manter o foco, agitação, impulsividade, esquecimentos': M('Sem queixas', 'Desatenção', 'Agitação', 'Impulsividade', 'Esquecimentos'),
+    'Comportamentos específicos: mentir, furtar, destruir objetos, crueldade com animais, fugas, tiques, roer unhas, manias': M('Nenhum', 'Mentir', 'Furtar', 'Destruir objetos', 'Crueldade com animais', 'Fugas', 'Tiques', 'Roer unhas', 'Manias'),
+    'Brincadeiras e atividades preferidas; presença de amigos imaginários': M('Brincadeiras de faz de conta', 'Jogos eletrônicos', 'Esportes', 'Desenho/artes', 'Brinca sozinha', 'Brinca com outras crianças', 'Amigo imaginário'),
+    'Temperamento descrito pela família (do bebê à fase atual)': M('Calmo', 'Agitado', 'Tímido', 'Sociável', 'Irritável', 'Sensível', 'Teimoso', 'Medroso'),
+    'Puberdade e sexualidade (a partir de 9 a 10 anos)': ['Não iniciada', 'Em curso sem queixas', 'Em curso com dúvidas/queixas', 'Não se aplica pela idade'],
+    'Entrada na educação infantil: idade e adaptação à separação dos pais': ['Boa adaptação', 'Adaptação difícil', 'Não frequentou educação infantil'],
+    'Idade de alfabetização e ritmo em relação à turma': ['No ritmo da turma', 'Um pouco atrás', 'Muito atrás', 'Adiantado(a)', 'Ainda não alfabetizado(a)'],
+    'Comportamento em sala e no recreio; queixas de professores ou coordenação': M('Sem queixas', 'Agitação', 'Desatenção', 'Agressividade', 'Isolamento', 'Choro', 'Desafio às regras'),
+    'Relação com professores e colegas; frequência e faltas; recusa escolar': M('Boa relação', 'Conflitos com colegas', 'Conflitos com professores', 'Muitas faltas', 'Recusa escolar'),
+    'Adaptação curricular, mediador, sala de recursos ou AEE; laudo entregue à escola': M('Não', 'Adaptação curricular', 'Mediador', 'Sala de recursos/AEE', 'Laudo entregue'),
+    'Reprovações, mudanças de escola, suspensões': M('Nenhuma', 'Reprovação', 'Mudança de escola', 'Suspensão'),
+    'Rotina de estudo em casa e quem acompanha as tarefas': ['Rotina regular com acompanhamento', 'Rotina regular sem acompanhamento', 'Sem rotina de estudo'],
+    'Aspirações escolares e profissionais (adolescentes)': ['Definidas', 'Em construção', 'Sem interesse', 'Não se aplica pela idade'],
+    'Avaliações anteriores (psicopedagógica, neuropsicológica) e relatórios disponíveis': M('Nenhuma', 'Psicopedagógica', 'Neuropsicológica', 'Fonoaudiológica', 'Relatórios disponíveis'),
+    'Relação com pai, mãe, irmãos e outros cuidadores': REL,
+    'Regras, limites e consequências em casa; consenso entre os cuidadores': ['Claros e com consenso', 'Claros sem consenso', 'Inconsistentes', 'Rígidos/punitivos', 'Permissivos'],
+    'Estilo de comunicação e demonstrações de afeto na família': ['Afetuoso e com diálogo', 'Afetuoso com pouco diálogo', 'Pouco afetuoso', 'Conflituoso'],
+    'Bullying ou cyberbullying (sofrido ou praticado)': M('Não', 'Sofreu bullying', 'Praticou bullying', 'Cyberbullying'),
+    'Atividades extracurriculares, esportes, artes, idiomas, vida religiosa ou comunitária': M('Nenhuma', 'Esportes', 'Artes/música', 'Idiomas', 'Religiosas', 'Comunitárias'),
+    'Rotina diária (acordar, escola, refeições, lazer, tarefas, dormir) e tempo com cada cuidador': ['Organizada', 'Irregular', 'Sobrecarregada', 'Com pouco tempo com os cuidadores'],
+    'Telas e internet: tempo médio diário, conteúdos, redes sociais, jogos online, supervisão': ['Até 1 h/dia', '1 a 2 h/dia', '2 a 4 h/dia', 'Mais de 4 h/dia'],
+    'Uso ou experimentação de álcool, tabaco, vape ou outras substâncias (a partir de 10 a 12 anos)': M('Não', 'Álcool', 'Tabaco', 'Vape', 'Outras substâncias', 'Não se aplica pela idade'),
+    'Exposição a violência, negligência, abuso ou conflito intenso em casa ou fora dela': M('Não', 'Violência física', 'Violência psicológica', 'Negligência', 'Suspeita de abuso', 'Conflito intenso entre os pais'),
+    'Ideação suicida, comportamento autolesivo, fugas de casa (perguntar diretamente, a partir dos 10 anos)': M('Não', 'Ideação suicida', 'Autolesão', 'Fugas de casa', 'Não se aplica pela idade'),
+    'Acesso a meios letais em casa (armas, medicamentos); medidas de segurança já adotadas': ['Sem acesso', 'Há acesso, com medidas de segurança', 'Há acesso, sem medidas de segurança'],
+    'Fatores de proteção: vínculos seguros, adulto de confiança, hobbies, religiosidade, rede de amigos': M('Vínculos seguros', 'Adulto de confiança', 'Hobbies', 'Religiosidade', 'Rede de amigos', 'Escola acolhedora'),
+    'Necessidade de notificação ou articulação com rede de proteção (Conselho Tutelar, CRAS/CREAS, escola)': M('Não', 'Conselho Tutelar', 'CRAS/CREAS', 'Escola', 'Saúde'),
+    'Aparência, comportamento e interação da criança/adolescente durante a entrevista': M('Adequados', 'Tímido(a)', 'Agitado(a)', 'Desafiador(a)', 'Choroso(a)', 'Retraído(a)'),
+    'Postura dos responsáveis, coerência e consistência do relato, vínculo com a criança': M('Colaborativos', 'Relato coerente', 'Relato contraditório', 'Vínculo afetivo presente', 'Vínculo frágil', 'Divergência entre os responsáveis'),
+    'Fatores de risco identificados e conduta imediata, se houver': ['Nenhum', 'Baixo', 'Moderado', 'Alto (conduta imediata)'],
+    'Hipóteses iniciais e necessidade de diagnóstico diferencial': M('Ainda sem hipótese', 'Ansiedade', 'Humor', 'TDAH', 'TEA', 'Aprendizagem', 'Comportamento', 'Questões familiares', 'Outra'),
+    'Plano de avaliação (instrumentos, sessões com a criança, devolutiva, contato com a escola)': M('Sessões com a criança', 'Sessões com os responsáveis', 'Instrumentos/testes', 'Contato com a escola', 'Devolutiva'),
+    'Encaminhamentos (psiquiatria, neurologia, fonoaudiologia, outros)': M('Nenhum', 'Psiquiatria', 'Neurologia', 'Fonoaudiologia', 'Terapia ocupacional', 'Psicopedagogia', 'Outro'),
+    'Acordos do contrato terapêutico: frequência, valor, faltas, sigilo e seus limites': M('Frequência', 'Valor', 'Política de faltas', 'Sigilo e seus limites', 'Tudo combinado')
+  };
+
+  // Regras por seção quando a pergunta não está no mapa
+  function porSecao(q, secao) {
+    if (/^4\. Desenvolvimento e trajetória/.test(secao)) return VIV;
+    if (/^Histórico familiar de saúde mental/.test(q)) return { op: ['Nenhum conhecido', 'Depressão', 'Ansiedade', 'TDAH', 'TEA', 'Transtorno bipolar', 'Psicose', 'Dependência química', 'Suicídio', 'Não sabe informar'], m: 1 };
+    return null;
+  }
+
+  window.aplicarOpcoesAnamnese = function (FICHAS) {
+    Object.keys(FICHAS).forEach(k => FICHAS[k].secoes.forEach(s => s.itens.forEach(it => {
+      if (it.op || it.pf || it.tipo === 'date') return; // já tem opções, vem do cadastro ou é data
+      const v = MAPA[it.q] || porSecao(it.q, s.t);
+      if (!v) return;
+      if (Array.isArray(v)) { it.op = v; } else { it.op = v.op; if (v.m) it.m = 1; }
+      it.t = 1; // sempre com campo de observação
+    })));
+  };
+})();
