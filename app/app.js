@@ -175,6 +175,7 @@ const IC = {
   share: I('<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4M12 2v13"/>'),
   file: I('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/>'),
   shield: I('<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'),
+  anam: I('<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h4"/>'),
   note: I('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>'),
   clock: I('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
   book: I('<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5V21h16"/>'),
@@ -388,9 +389,9 @@ function showRecoveryReset() {
    ===================================================================== */
 const S = { view: 'home', cur: null, tab: 'ident', q: '', flt: 'ativo' };
 const TABS = [
-  ['ident', '1. Cadastro', 'id'], ['demanda', '2. Demanda e acolhimento', 'chat'], ['diagnostico', '3. Avaliação e diagnóstico', 'diag'],
-  ['objetivos', '4. Plano terapêutico', 'target'], ['evolucao', '5. Sessões', 'trend'], ['encaminhamentos', '6. Encaminhamento e alta', 'share'],
-  ['documentos', '7. Documentos', 'file'], ['linha', 'Linha do tempo', 'clock'], ['emitir', 'Atestado e recibo', 'printer'], ['acesso', 'Sigilo e acesso', 'shield'], ['privado', 'Anotações privadas', 'note']
+  ['ident', '1. Cadastro', 'id'], ['anamnese', '2. Anamnese', 'anam'], ['demanda', '3. Demanda e acolhimento', 'chat'], ['diagnostico', '4. Avaliação e diagnóstico', 'diag'],
+  ['objetivos', '5. Plano terapêutico', 'target'], ['evolucao', '6. Sessões', 'trend'], ['encaminhamentos', '7. Encaminhamento e alta', 'share'],
+  ['documentos', '8. Documentos', 'file'], ['linha', 'Linha do tempo', 'clock'], ['emitir', 'Atestado e recibo', 'printer'], ['acesso', 'Sigilo e acesso', 'shield'], ['privado', 'Anotações privadas', 'note']
 ];
 const P = () => DB.patients.find(p => p.id === S.cur);
 
@@ -714,7 +715,7 @@ function paneLembretes(m) {
 }
 
 /* ---------- Modelos de documentos (Resolução CFP nº 06/2019) ---------- */
-const SEC_RE = /^\d\. [A-ZÁÉÍÓÚÂÊÔÃÕÇ ]{4,}$/;
+const SEC_RE = /^\d{1,2}\. [A-ZÁÉÍÓÚÂÊÔÃÕÇÀÜ ,\/()–-]{4,}$/;
 const MODELOS = {
   relatorio: { titulo: 'RELATÓRIO PSICOLÓGICO', nome: 'Relatório psicológico', desc: 'Comunica a atuação profissional em um processo de trabalho, com identificação, demanda, procedimento, análise e conclusão.' },
   parecer: { titulo: 'PARECER PSICOLÓGICO', nome: 'Parecer psicológico', desc: 'Responde a uma questão específica, com análise técnica fundamentada.' },
@@ -741,7 +742,7 @@ function paneModelo(p) {
         <div class="c12"><label>Finalidade</label><input id="mFin" placeholder="Ex.: atender solicitação da escola" oninput="emText()"></div>`}
       <div class="c12"><label>Texto do documento <span style="font-weight:400">(preenchido com os dados do prontuário; revise e complete o que está entre colchetes)</span></label><textarea id="aTxt" style="min-height:280px" oninput="EM.edited=true"></textarea></div>
     </div><div class="row-actions"><button onclick="EM.edited=false;emText()">Refazer texto</button><button class="pri" onclick="emitirModelo()">Gerar documento</button></div></div>
-    <div class="note">Os modelos seguem a estrutura da Resolução CFP nº 06/2019. As anotações privadas nunca entram nos documentos. O documento emitido fica salvo em <b>6. Documentos</b>.</div>`);
+    <div class="note">Os modelos seguem a estrutura da Resolução CFP nº 06/2019. As anotações privadas nunca entram nos documentos. O documento emitido fica salvo em <b>8. Documentos</b>.</div>`);
   emText(true);
 }
 function emitirModelo() { const t = val('aTxt'); if (/\[[^\]]+\]/.test(t)) return confirmBox('Ainda há campos entre colchetes', 'O texto tem trechos como [descreva…] que ainda não foram completados. Deseja gerar assim mesmo?', 'Gerar assim mesmo', emitir); emitir(); }
@@ -1004,6 +1005,7 @@ function etapas(p) {
   const fim = p.status === 'encerrado';
   return [
     ['ident', 'Cadastro', !!(p.ident.nome && p.ident.nascimento && (p.ident.telefone || p.ident.responsaveis.some(r => r.telefone)))],
+    ['anamnese', 'Anamnese', (() => { const r = typeof anamneseResumo === 'function' && anamneseResumo(p); return !!(r && r.feitas >= Math.max(10, Math.round(r.tot * 0.1))); })()],
     ['demanda', 'Demanda', !!p.demanda.queixa],
     ['diagnostico', 'Avaliação', (p.diagnosticos || []).length > 0],
     ['objetivos', 'Plano', p.objetivos.length > 0],
@@ -1013,6 +1015,7 @@ function etapas(p) {
 }
 const DICA_ETAPA = {
   ident: ['Complete o cadastro', 'Data de nascimento, telefone e, para menores, o responsável.'],
+  anamnese: ['Faça a anamnese', 'Digite a idade e a ficha certa abre: infantojuvenil (3 a 17 anos) ou adultos (18+).'],
   demanda: ['Registre a demanda', 'Motivo da busca, histórico e como foi o acolhimento.'],
   diagnostico: ['Faça a avaliação', 'Registre instrumentos, hipótese diagnóstica ou avaliação psicológica.'],
   objetivos: ['Defina o plano terapêutico', 'Metas de curto, médio e longo prazo pactuadas com o paciente.'],
@@ -1037,6 +1040,7 @@ function fluxoHTMLBase(p) {
 function eventosPaciente(p) {
   const ev = [], hr = iso => iso ? new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
   if (p.criadoEm) ev.push({ d: p.criadoEm.slice(0, 10), h: hr(p.criadoEm), k: 'ident', t: 'Cadastro do paciente', x: '' });
+  { const r = typeof anamneseResumo === 'function' && anamneseResumo(p); if (r && r.feitas && r.em) ev.push({ d: r.em.slice(0, 10), h: hr(r.em), k: 'anamnese', t: 'Anamnese · ficha ' + r.nome, x: `${r.feitas} de ${r.tot} perguntas respondidas` }); }
   if (p.demanda.dataInicio) ev.push({ d: p.demanda.dataInicio, h: '', k: 'demanda', t: 'Início do atendimento · ' + (p.demanda.modalidade || ''), x: p.demanda.queixa || '' });
   (p.diagnosticos || []).forEach(d => ev.push({ d: d.data, h: hr(d.criadoEm), k: 'diagnostico', t: d.tipo + (d.cid ? ' · CID ' + d.cid : ''), x: d.texto }));
   p.objetivos.forEach(o => ev.push({ d: o.data, h: '', k: 'objetivos', t: 'Meta (' + o.prazo.toLowerCase() + ') · ' + o.status, x: o.texto }));
@@ -1119,7 +1123,7 @@ function panePatient(m, p) {
       <button class="sec-atual ${S.tab === 'privado' ? 'priv' : ''}" onclick="menuSecoes()"><span class="sec-ic sm">${IC[tb[2]]}</span><b>${tb[1].replace(/^\d+\.\s*/, '')}</b><span class="sec-mais">Seções ▾</span></button></div>
     <div id="pane"></div>`;
   paneEl = $('pane');
-  ({ ident: paneIdent, demanda: paneDemanda, objetivos: paneObj, diagnostico: paneDiag, evolucao: paneEvo, linha: paneLinha, encaminhamentos: paneEnc, documentos: paneDocs, emitir: paneEmitir, acesso: paneAcesso, privado: panePriv })[S.tab](p);
+  ({ ident: paneIdent, anamnese: p => paneAnamnese(p), demanda: paneDemanda, objetivos: paneObj, diagnostico: paneDiag, evolucao: paneEvo, linha: paneLinha, encaminhamentos: paneEnc, documentos: paneDocs, emitir: paneEmitir, acesso: paneAcesso, privado: panePriv })[S.tab](p);
 }
 function bind(obj) { paneEl.querySelectorAll('[data-f]').forEach(el => { obj[el.dataset.f] = el.type === 'checkbox' ? el.checked : el.value.trim(); }); }
 function fld(lbl, k, v, cls, type, extra) { return `<div class="${cls || 'c6'}"><label>${lbl}</label><input type="${type || 'text'}" data-f="${k}" value="${esc(v)}" ${extra || ''}></div>`; }
@@ -1406,6 +1410,7 @@ function recordHTML(p) {
    ${i.interditado ? row('Condição', 'Pessoa interditada / sob curatela') : ''}
    ${i.responsaveis.filter(r => r.nome).map(r => row('Responsável legal', `${r.nome} (${r.parentesco || '—'}) · CPF ${r.cpf || '—'} · ${r.telefone || ''} ${r.email || ''}`)).join('')}
    ${row('Psicólogo(a) responsável', `${i.psicologo} — CRP ${i.crp}`)}</table>
+  ${typeof anamneseHTML === 'function' ? anamneseHTML(p) : ''}
   <h4>2. Demanda e acolhimento</h4><table>${row('Início', fmtD(p.demanda.dataInicio))}${row('Modalidade', p.demanda.modalidade)}${row('Queixa inicial', p.demanda.queixa)}${row('Histórico / contexto', p.demanda.historico)}</table>
   ${(p.diagnosticos || []).length ? `<h4>3. Avaliação psicológica e diagnóstico</h4>${p.diagnosticos.map(d => `<p><b>${fmtD(d.data)} — ${esc(d.tipo)}${d.cid ? ' (CID ' + esc(d.cid) + ')' : ''}</b>${d.instrumentos ? '<br><i>Instrumentos:</i> ' + esc(d.instrumentos) : ''}<br>${esc(d.texto)}${(d.retificacoes || []).map(r => `<br><i>Retificação (${fmtDT(r.em)}):</i> ${esc(r.texto)}`).join('')}</p>`).join('')}` : '<h4>3. Avaliação psicológica e diagnóstico</h4><p>—</p>'}
   <h4>4. Plano terapêutico — objetivos</h4>${p.objetivos.length ? `<table>${p.objetivos.map(o => row(o.prazo + ' · ' + fmtD(o.data), o.texto + ' [' + o.status + ']')).join('')}</table>` : '<p>—</p>'}
@@ -2250,7 +2255,7 @@ function paneFin(m) {
       <td><select class="pg ${e.pago ? 'ok' : 'warn'}" onchange="setPg('${p.id}','${e.id}','pago',this.value)"><option value="0" ${!e.pago ? 'selected' : ''}>Pendente</option><option value="1" ${e.pago ? 'selected' : ''}>Pago</option></select></td>
       <td><select onchange="setPg('${p.id}','${e.id}','forma',this.value)">${FORMAS.map(o => `<option ${e.forma === o ? 'selected' : ''}>${o}</option>`).join('')}</select></td>
       <td>${!e.pago && e.valor > 0 ? `<button class="pix-btn sm" onclick="cobrarSessao('${p.id}','${e.id}')">${PIX_ICON}Pix</button>` : ''}</td></tr>`).join('')}</table></div>`
-    : '<div style="color:var(--muted);font-size:13px">Nenhuma consulta com valor neste mês. O valor é informado ao registrar a sessão em <b>4. Evolução</b>.</div>'}</div>
+    : '<div style="color:var(--muted);font-size:13px">Nenhuma consulta com valor neste mês. O valor é informado ao registrar a sessão em <b>6. Sessões</b>.</div>'}</div>
   ${pacs.length ? `<div class="card"><h3>Por paciente</h3><div class="tbl-wrap"><table class="list"><tr><th>Paciente</th><th>Consultas</th><th>Faturado</th><th>Recebido</th><th>A receber</th><th></th></tr>
     ${pacs.map(o => `<tr><td>${esc(o.nome)}</td><td>${o.n}</td><td>${brl(o.fat)}</td><td>${brl(o.rec)}</td><td>${o.fat - o.rec > 0 ? `<b style="color:var(--warn)">${brl(o.fat - o.rec)}</b>` : brl(0)}</td><td>${o.fat - o.rec > 0 ? `<button class="pix-btn sm" onclick="cobrarPendentes('${o.pid}','${mes}')">${PIX_ICON}Cobrar</button>` : ''}</td></tr>`).join('')}</table></div></div>` : ''}
   <div class="card"><h3>Outros lançamentos</h3>
@@ -2374,7 +2379,7 @@ function paneEmitir(p, single) {
       <div class="c12"><label>Datas das sessões</label><input id="rDatas" value="${esc(sessoesMes(p))}" placeholder="Ex.: 04, 11, 18 e 25/11/2026" oninput="emText()"></div>
       <div class="c12"><label>Texto do recibo <span style="font-weight:400">(gerado automaticamente; pode editar)</span></label><textarea id="aTxt" style="min-height:120px" oninput="EM.edited=true"></textarea></div>
     </div><div class="row-actions"><button onclick="EM.edited=false;emText()">Refazer texto</button><button class="pri" onclick="emitir()">Gerar recibo</button></div></div>`}
-  <div class="note">Os documentos emitidos ficam salvos automaticamente em <b>6. Documentos</b>, como exige a guarda do prontuário.</div>`);
+  <div class="note">Os documentos emitidos ficam salvos automaticamente em <b>8. Documentos</b>, como exige a guarda do prontuário.</div>`);
   emText(true);
 }
 function valorMes(p) { const m = today().slice(0, 7), t = p.evolucao.filter(e => e.data.startsWith(m) && e.valor > 0).reduce((s, e) => s + e.valor, 0); return t ? t.toFixed(2).replace('.', ',') : (p.ident.valorSessao || ''); }
@@ -2532,7 +2537,9 @@ function buildPDF(d) {
   y += 14; doc.setFont('helvetica', 'normal'); doc.setFontSize(11.5);
   const lh = 6.4;
   d.texto.split(/\n+/).forEach(par => {
-    if (SEC_RE.test(par)) { if (y > 225) { doc.addPage(); y = 30; } doc.setFont('helvetica', 'bold'); doc.text(par, L, y + 2); doc.setFont('helvetica', 'normal'); y += 9; return; }
+    const cab = par.startsWith('## ');
+    if (cab) par = par.slice(3);
+    if (cab || SEC_RE.test(par)) { if (y > 225) { doc.addPage(); y = 30; } doc.setFont('helvetica', 'bold'); doc.text(doc.splitTextToSize(par, Wd), L, y + 2); if (doc.splitTextToSize(par, Wd).length > 1) y += 5; doc.setFont('helvetica', 'normal'); y += 9; return; }
     const lines = doc.splitTextToSize(par, Wd);
     if (lines.length * lh > 190) { lines.forEach(ln => { if (y > 262) { doc.addPage(); y = 30; } doc.text(ln, L, y); y += lh; }); y += 4; return; }
     if (y + lines.length * lh > 262) { doc.addPage(); y = 30; }
