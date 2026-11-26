@@ -2533,7 +2533,8 @@ function buildPDF(d) {
     doc.setTextColor(21, 26, 51); doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.text(brl(d.valor), L + Wd - 4, 56.5, { align: 'right' });
     y = 74;
   }
-  doc.setTextColor(21, 26, 51); doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.text(d.titulo, 105, y, { align: 'center' });
+  doc.setTextColor(21, 26, 51); doc.setFont('helvetica', 'bold'); doc.setFontSize(15);
+  { const tl = doc.splitTextToSize(d.titulo, Wd); tl.forEach((t, k) => doc.text(t, 105, y + k * 7, { align: 'center' })); y += (tl.length - 1) * 7; }
   y += 14; doc.setFont('helvetica', 'normal'); doc.setFontSize(11.5);
   const lh = 6.4;
   d.texto.split(/\n+/).forEach(par => {
@@ -2547,7 +2548,21 @@ function buildPDF(d) {
     y += lines.length * lh + 4;
   });
   y = Math.max(y + 8, 150);
+  if (d.assinaturas && d.assinaturas.length) { const rows = Math.ceil((d.assinaturas.length + 1) / 2); if (y + 26 + (rows - 1) * 34 + 14 > 284) { doc.addPage(); y = 40; } }
   doc.text(`${d.cidade ? d.cidade + ', ' : ''}${dataExtenso(d.data)}.`, L + Wd, y, { align: 'right' });
+  if (d.assinaturas && d.assinaturas.length) { // vários assinantes, 2 por linha (ex.: termo de consentimento)
+    const lst = d.assinaturas.concat([{ nome: pr.nome || '', papel: `Psicólogo(a) · CRP ${pr.crp}` }]);
+    y += 26;
+    lst.forEach((a, i) => {
+      const col = i % 2, x = col ? 112 : L;
+      if (col === 0 && i > 0) y += 34;
+      if (y > 268) { doc.addPage(); y = 50; }
+      doc.setDrawColor(21, 26, 51); doc.setLineWidth(.3); doc.line(x, y, x + 78, y);
+      doc.setTextColor(21, 26, 51); doc.setFontSize(10); doc.text(doc.splitTextToSize(a.nome || '', 78)[0] || '', x + 39, y + 5.5, { align: 'center' });
+      doc.setFontSize(8.8); doc.setTextColor(90, 96, 128); doc.text(doc.splitTextToSize(a.papel || '', 80), x + 39, y + 10, { align: 'center' });
+    });
+    return doc.output('blob');
+  }
   y += 34; if (y > 270) { doc.addPage(); y = 60; }
   doc.setDrawColor(21, 26, 51); doc.setLineWidth(.3); doc.line(65, y, 145, y);
   doc.setFontSize(10.5); doc.text(pr.nome || '', 105, y + 6, { align: 'center' });

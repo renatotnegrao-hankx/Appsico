@@ -211,8 +211,7 @@
           'Aparência, comportamento e interação da criança/adolescente durante a entrevista',
           'Postura dos responsáveis, coerência e consistência do relato, vínculo com a criança', 'Fatores de risco identificados e conduta imediata, se houver',
           'Hipóteses iniciais e necessidade de diagnóstico diferencial', 'Plano de avaliação (instrumentos, sessões com a criança, devolutiva, contato com a escola)',
-          'Encaminhamentos (psiquiatria, neurologia, fonoaudiologia, outros)', 'Acordos do contrato terapêutico: frequência, valor, faltas, sigilo e seus limites',
-          { q: 'Termo de consentimento dos responsáveis e assentimento da criança/adolescente', op: ['Assinado', 'Pendente'] }] }
+          'Encaminhamentos (psiquiatria, neurologia, fonoaudiologia, outros)', 'Acordos do contrato terapêutico: frequência, valor, faltas, sigilo e seus limites'] }
       ]
     }
   };
@@ -263,6 +262,8 @@
     p.anamnese = p.anamnese || { modelo: null, resp: {} };
     p.anamnese.resp = p.anamnese.resp || {};
     if (!p.anamnese._v2) { migra(p); p.anamnese._v2 = 1; }
+    // a pergunta "Termo de consentimento" da seção 8 virou o quadro do termo no fim da ficha
+    const ri = p.anamnese.resp.infanto; if (ri && ri.i7_7 && !(p.anamnese.termo && p.anamnese.termo.resp)) { p.anamnese.termo = Object.assign({}, p.anamnese.termo, { resp: ri.i7_7 }); delete ri.i7_7; }
     if (modelo && !p.anamnese.resp[modelo]) {
       const r = p.anamnese.resp[modelo] = {};
       FICHAS[modelo].secoes.forEach(s => s.itens.forEach(it => { if (it.pf) { const v = preenchimento(p, it); if (v) r[it.id] = v; } }));
@@ -331,6 +332,7 @@
       <div id="anForm" data-m="${m}">${f.secoes.map((s, si) => `<details class="card an-sec ${s.risco ? 'risco' : ''}" ${si === 0 || (S.anAberta || []).includes(m + si) ? 'open' : ''} ontoggle="anMarca('${m + si}',this.open)">
         <summary><b>${esc(s.t)}</b><span class="an-sc" id="anSc${si}">0/${s.itens.length}</span></summary>
         ${s.nota ? `<div class="note ${s.risco ? 'warn' : ''}">${esc(s.nota)}</div>` : ''}${s.itens.map(item).join('')}</details>`).join('')}</div>
+      ${m === 'infanto' ? termoCard(p) : ''}
       <div class="note">A anamnese fica dentro do prontuário, criptografada como todo o resto, e entra no <b>Prontuário completo</b>. As respostas da outra ficha (se a idade mudar) não são apagadas.</div>`);
     document.querySelectorAll('#anForm textarea').forEach(autoAltura);
     atualizaContagem();
@@ -353,7 +355,8 @@
   }
   window.anamneseHTML = function (p) {
     const r = anamneseResumo(p); if (!r || !r.feitas) return '';
-    return `<h4>Anamnese — ${esc(r.titulo)}</h4>${linhas(p).map(s => `<p style="margin:10px 0 4px"><b>${esc(s.t)}</b></p><table>${s.itens.map(([q, v]) => `<tr><td>${esc(q)}</td><td>${esc(v)}</td></tr>`).join('')}</table>`).join('')}`;
+    const tm = p.anamnese.termo || {}, termoL = r.modelo === 'infanto' && (tm.resp || tm.assent) ? `<p style="margin:10px 0 4px"><b>Termo de consentimento e assentimento</b></p><table><tr><td>Termo dos responsáveis</td><td>${esc(tm.resp || '—')}</td></tr><tr><td>Assentimento da criança/adolescente</td><td>${esc(tm.assent || '—')}</td></tr><tr><td>Data da assinatura</td><td>${tm.em ? fmtD(tm.em) : '—'}</td></tr></table>` : '';
+    return `<h4>Anamnese — ${esc(r.titulo)}</h4>${termoL}${linhas(p).map(s => `<p style="margin:10px 0 4px"><b>${esc(s.t)}</b></p><table>${s.itens.map(([q, v]) => `<tr><td>${esc(q)}</td><td>${esc(v)}</td></tr>`).join('')}</table>`).join('')}`;
   };
   window.anPDF = function () {
     const p = P(); if (!p) return;
@@ -373,4 +376,67 @@
       } catch (e) { toast('Não foi possível gerar o PDF: ' + e.message); }
     };
   };
+
+  // ---------- Termo de consentimento dos responsáveis e assentimento da criança/adolescente ----------
+  const respDe = p => (p.ident.responsaveis || []).filter(r => r && r.nome);
+  function termoTexto(p) {
+    const i = p.ident, pr = DB.prof, rs = respDe(p), n = idadeAnam(p);
+    const nomeP = i.nome || '______________________________';
+    const L = [];
+    L.push('## 1. IDENTIFICAÇÃO');
+    L.push(`Criança/adolescente: ${nomeP}${i.nascimento ? ` · nascimento ${fmtD(i.nascimento)}` : ''}${n !== null ? ` · ${n} anos` : ''}.`);
+    if (rs.length) { rs.forEach((r, k) => L.push(`Responsável ${k + 1}: ${r.nome}${r.parentesco ? ` (${r.parentesco})` : ''}${r.cpf ? ` · CPF ${r.cpf}` : ' · CPF ____________________'}.`)); if (rs.length < 2) L.push('Responsável 2 (se houver): ________________________________________ · parentesco: ____________ · CPF ____________________.'); }
+    else { L.push('Responsável 1: ________________________________________ · parentesco: ____________ · CPF ____________________.'); L.push('Responsável 2: ________________________________________ · parentesco: ____________ · CPF ____________________.'); }
+    L.push(`Psicólogo(a) responsável: ${pr.nome || '____________________'} · CRP ${pr.crp || '__________'}.`);
+    L.push('## 2. SOBRE O ATENDIMENTO');
+    L.push(`Os responsáveis abaixo assinados autorizam a realização de avaliação e acompanhamento psicológico de ${nomeP}, conforme o artigo 8º do Código de Ética Profissional do Psicólogo (Resolução CFP nº 010/2005), que exige a autorização de ao menos um dos responsáveis para o atendimento de crianças e adolescentes.`);
+    L.push('O atendimento tem por objetivo compreender as dificuldades apresentadas e oferecer cuidado psicológico adequado à idade, por meio de entrevistas com os responsáveis, sessões com a criança/adolescente (que podem incluir conversa, brincadeiras, desenhos, jogos e instrumentos psicológicos) e devolutivas periódicas.');
+    L.push('Frequência, duração, valor das sessões, forma de pagamento e política de faltas e remarcações: conforme combinado no contrato terapêutico. Os responsáveis podem pedir esclarecimentos a qualquer momento e interromper o acompanhamento quando desejarem, de preferência com uma sessão de encerramento.');
+    L.push('## 3. SIGILO E SEUS LIMITES');
+    L.push('Tudo o que for dito e produzido nas sessões é sigiloso. Aos responsáveis serão comunicadas apenas as informações estritamente necessárias para promover medidas em benefício da criança/adolescente (artigo 13 do Código de Ética), preservando a confiança no vínculo terapêutico.');
+    L.push('O sigilo poderá ser quebrado, na medida do estritamente necessário, quando houver risco à vida ou à integridade da criança/adolescente ou de terceiros, e nas situações previstas em lei. Suspeitas ou confirmações de violência, abuso ou negligência serão comunicadas ao Conselho Tutelar, conforme o Estatuto da Criança e do Adolescente (Lei nº 8.069/1990).');
+    L.push('O contato com a escola, médicos ou outros profissionais só será feito com autorização dos responsáveis, exceto nas situações de proteção descritas acima.');
+    L.push('## 4. REGISTROS E PROTEÇÃO DE DADOS');
+    L.push('As informações do atendimento ficam registradas em prontuário psicológico, guardado com sigilo e criptografia pelo prazo mínimo de 5 (cinco) anos, conforme as normas do Conselho Federal de Psicologia. Os dados pessoais da criança/adolescente são tratados no seu melhor interesse e com o consentimento dos responsáveis, conforme o artigo 14 da Lei Geral de Proteção de Dados (Lei nº 13.709/2018).');
+    L.push('## 5. DECLARAÇÃO DOS RESPONSÁVEIS');
+    L.push(`Declaramos que lemos (ou nos foi lido) este termo, que recebemos explicações claras sobre o atendimento, o sigilo e seus limites, que tivemos a oportunidade de tirar dúvidas e que autorizamos, de forma livre e esclarecida, o atendimento psicológico de ${nomeP}.`);
+    L.push('## 6. TERMO DE ASSENTIMENTO DA CRIANÇA/ADOLESCENTE');
+    L.push(`Eu, ${i.nome ? i.nome.split(' ')[0] : '____________________'}, conversei com o(a) psicólogo(a) e entendi que vamos nos encontrar para conversar, brincar e pensar juntos sobre o que eu sinto e sobre o que está difícil para mim. Entendi que o que eu contar fica guardado entre nós, e que só será contado para outra pessoa se for preciso para me proteger. Entendi também que posso fazer perguntas e dizer quando não quiser falar sobre alguma coisa. Eu concordo em participar.`);
+    L.push('Forma do assentimento: ( ) assinatura da criança/adolescente   ( ) nome escrito ou desenho   ( ) concordância verbal registrada pelo(a) psicólogo(a).');
+    return L.join('\n');
+  }
+  function termoAssinaturas(p) {
+    const rs = respDe(p), i = p.ident, a = [];
+    (rs.length >= 2 ? rs.slice(0, 2) : rs.concat([{}, {}]).slice(0, 2)).forEach((r, k) => a.push({ nome: r.nome || '', papel: r.nome ? `Responsável ${k + 1}${r.parentesco ? ' (' + r.parentesco + ')' : ''} — responsável legal` : `Responsável ${k + 1}${k ? ' (se houver)' : ''} — nome e assinatura` }));
+    a.push({ nome: i.nome || '', papel: 'Criança/adolescente (assentimento)' });
+    return a;
+  }
+  window.anTermoPDF = async function () {
+    const p = P(); if (!p) return;
+    try {
+      const blob = buildPDF({ kind: 'termo', prof: DB.prof, titulo: 'TERMO DE CONSENTIMENTO DOS RESPONSÁVEIS E ASSENTIMENTO DA CRIANÇA/ADOLESCENTE', texto: termoTexto(p), cidade: DB.prof.cidade || '', data: today(), assinaturas: termoAssinaturas(p) });
+      await deliverPDF(blob, `Termo de consentimento - ${(p.ident.nome || 'paciente').replace(/[^\wÀ-ÿ ]+/g, '')}.pdf`);
+    } catch (e) { toast('Não foi possível gerar o termo: ' + e.message); }
+  };
+  window.anTermoStatus = function (campo, v) {
+    const p = P(); if (!p) return; garante(p); p.anamnese.termo = p.anamnese.termo || {};
+    p.anamnese.termo[campo] = p.anamnese.termo[campo] === v ? '' : v;
+    if (campo === 'resp' && p.anamnese.termo.resp === 'Assinado' && !p.anamnese.termo.em) p.anamnese.termo.em = today();
+    save(); paneAnamnese(p);
+    const c = document.getElementById('anTermo'); if (c) c.scrollIntoView({ block: 'center' });
+  };
+  window.anTermoData = function (el) { const p = P(); if (!p) return; garante(p); p.anamnese.termo = p.anamnese.termo || {}; p.anamnese.termo.em = el.value; save(); };
+  function termoCard(p) {
+    const t = (p.anamnese && p.anamnese.termo) || {}, rs = respDe(p);
+    const bt = (campo, ops) => `<div class="an-ops">${ops.map(o => `<button type="button" class="${t[campo] === o ? 'on' : ''}" onclick="anTermoStatus('${campo}','${o}')">${esc(o)}</button>`).join('')}</div>`;
+    return `<div class="card an-termo" id="anTermo"><h3>Termo de consentimento dos responsáveis e assentimento da criança/adolescente</h3>
+      <p class="meta">Para ser assinado pelos pais ou responsável legal${rs.length ? ` (${rs.map(r => esc(r.nome)).join(' e ')})` : ''} e pela criança/adolescente, conforme o Código de Ética do Psicólogo (arts. 8º e 13), o ECA e a LGPD. O PDF já sai com os nomes do cadastro e as linhas de assinatura.</p>
+      ${rs.length ? '' : '<div class="note warn">Nenhum responsável no cadastro: o termo sai com os campos em branco para preencher à mão. Para sair com os nomes, cadastre os responsáveis em <b>1. Cadastro</b>.</div>'}
+      <details class="an-termo-txt"><summary>Ler o termo completo</summary><div>${termoTexto(p).split('\n').map(l => l.startsWith('## ') ? `<p><b>${esc(l.slice(3))}</b></p>` : `<p>${esc(l)}</p>`).join('')}</div></details>
+      <button class="pri" onclick="anTermoPDF()">${IC.printer || ''}<span>Gerar termo para assinatura (PDF)</span></button>
+      <div class="an-item"><label>Termo dos responsáveis</label>${bt('resp', ['Assinado', 'Pendente'])}</div>
+      <div class="an-item"><label>Assentimento da criança/adolescente</label>${bt('assent', ['Assinado', 'Concordância verbal registrada', 'Pendente'])}</div>
+      <div class="an-item"><label>Data da assinatura</label><input type="date" value="${esc(t.em || '')}" onchange="anTermoData(this)"></div></div>`;
+  }
+  window.anTermoCard = termoCard;
 })();
