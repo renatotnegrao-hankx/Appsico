@@ -32,11 +32,11 @@ window.APPSICO_CONFIG = {
   },
   // Versão mostrada em Ajuda e suporte
   loja: "site",        // "site" = APK do site (assinatura pelo Mercado Pago); "play" = versão da Google Play (sem compras no app)
-  versao: "6.2",
+  versao: "6.3",
   // Contato do suporte (aparece em Ajuda e suporte). Ex.: whatsapp: "11999998888", email: "suporte@appsico.com.br"
   suporte: {
     whatsapp: "",
-    email: "contato@appsico.com.br"
+    email: "falecom@appsico.com.br"
   },
   // Plano grátis x Premium (cobrança pela Google Play quando o app for publicado)
   billing: {
